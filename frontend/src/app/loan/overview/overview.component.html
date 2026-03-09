@@ -55,27 +55,27 @@
                 <app-company-address></app-company-address>
             </ng-template>
         </mat-tab>
-        <mat-tab label="Assurance Details">
+        <mat-tab *ngIf="hasTab('assurancedetails')" label="Assurance Details">
             <ng-template matTabContent>
                 <app-assurancedetails></app-assurancedetails>
             </ng-template>
         </mat-tab>
-        <mat-tab label="Sales Report">
+        <mat-tab *ngIf="hasTab('salesreport')" label="Sales Report">
             <ng-template matTabContent>
                 <app-salesreport></app-salesreport>
             </ng-template>
         </mat-tab>
-        <mat-tab label="Transactions">
+        <mat-tab *ngIf="hasTab('transactions')" label="Transactions">
             <ng-template matTabContent>
                 <app-trnsactions></app-trnsactions>
             </ng-template>
         </mat-tab>
-        <mat-tab label="Txn Filters">
+        <mat-tab *ngIf="hasTab('txn-filters')" label="Txn Filters">
             <ng-template matTabContent>
                 <app-transactionfilters></app-transactionfilters>
             </ng-template>
         </mat-tab>
-        <mat-tab label="Txn Statement">
+        <mat-tab *ngIf="hasTab('txn-statement')" label="Txn Statement">
             <ng-template matTabContent>
                 <app-transacation-statement></app-transacation-statement>
             </ng-template>

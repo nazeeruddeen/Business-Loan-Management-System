@@ -1,6 +1,5 @@
 import { NgModule } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -12,7 +11,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatDialogModule } from "@angular/material/dialog";
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatSortModule } from '@angular/material/sort';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -21,19 +20,16 @@ import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-
-
 @NgModule({
   declarations: [],
   providers: [DatePipe],
   imports: [
     CommonModule,
     FormsModule,
-    HttpClientModule,
+    ReactiveFormsModule,
+    RouterModule,
     MatFormFieldModule,
     MatInputModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
     MatSelectModule,
     MatRadioModule,
     MatDialogModule,
@@ -47,28 +43,20 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSidenavModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
-    RouterModule,
-    HttpClientModule,
     MatIconModule,
-    MatTooltipModule,
-    DatePipe,
+    MatTooltipModule
   ],
   exports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     RouterModule,
-    HttpClientModule,
     MatFormFieldModule,
     MatInputModule,
-    HttpClientModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
     MatSelectModule,
     MatRadioModule,
     MatDialogModule,
     MatCardModule,
-    MatIconModule,
-    MatTooltipModule,
     MatTableModule,
     MatTabsModule,
     MatButtonModule,
@@ -78,7 +66,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSidenavModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatIconModule,
+    MatTooltipModule,
     DatePipe
   ]
 })
-export class SharedModule { }
+export class SharedModule {}

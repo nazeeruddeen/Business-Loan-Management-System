@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { environment } from '../../../environments/environment';
+import { AuthorizationService } from '../../auth/authorization.service';
 
 @Component({
   selector: 'app-trnsactions',
@@ -19,6 +20,7 @@ export class TrnsactionsComponent {
   isLoading = false;
   errorMessage = '';
   successMessage = '';
+  canEdit = false;
 
   transactionsForm: FormGroup;
   private readonly apiBase = environment.hostname?.trim?.() ? environment.hostname.trim() : 'http://localhost:8080';
@@ -26,7 +28,8 @@ export class TrnsactionsComponent {
   constructor(
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authorizationService: AuthorizationService
   ) {
     this.transactionsForm = this.fb.group({
       transactions: this.fb.array([])
@@ -43,6 +46,11 @@ export class TrnsactionsComponent {
   }
 
   onFileChange(event: Event) {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to upload transactions.';
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
       this.file = target.files[0];
@@ -51,6 +59,11 @@ export class TrnsactionsComponent {
   }
 
   submit() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to upload transactions.';
+      return;
+    }
+
     if (!this.file) {
       this.errorMessage = 'Please select a file first';
       return;
@@ -100,6 +113,11 @@ export class TrnsactionsComponent {
   }
 
   saveData() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to save transactions.';
+      return;
+    }
+
     if (this.transactionsFormArray.invalid) {
       this.errorMessage = 'Please fix validation errors before saving';
       this.markFormGroupTouched(this.transactionsForm);
@@ -156,6 +174,11 @@ export class TrnsactionsComponent {
   }
 
   editForm() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to edit transactions.';
+      return;
+    }
+
     this.isEditing = !this.isEditing;
     if (this.isEditing && this.data.length > 0) {
       this.populateForm(this.data);
@@ -163,15 +186,30 @@ export class TrnsactionsComponent {
   }
 
   addNewTransaction() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to add transactions.';
+      return;
+    }
+
     this.transactionsFormArray.push(this.createTransactionGroup());
     this.isEditing = true;
   }
 
   removeTransaction(index: number) {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to remove transactions.';
+      return;
+    }
+
     this.transactionsFormArray.removeAt(index);
   }
 
   cancelEdit() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to edit transactions.';
+      return;
+    }
+
     this.isEditing = false;
     if (this.data.length > 0) {
       this.populateForm(this.data);
@@ -277,6 +315,7 @@ export class TrnsactionsComponent {
   }
 
   ngOnInit(): void {
+    this.canEdit = this.authorizationService.canEditTransactions();
     this.id = new URLSearchParams(window.location.search).get('id');
     if (this.id) {
       this.fetchData(Number(this.id));

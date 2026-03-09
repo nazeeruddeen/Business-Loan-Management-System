@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray, Validators, FormControl } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { environment } from '../../../environments/environment';
+import { AuthorizationService } from '../../auth/authorization.service';
 
 @Component({
   selector: 'app-salesreport',
@@ -19,14 +20,16 @@ export class SalesreportComponent {
   isLoading = false;
   errorMessage = '';
   successMessage = '';
-  
+  canEdit = false;
+
   salesForm: FormGroup;
   private readonly apiBase = environment.hostname?.trim?.() ? environment.hostname.trim() : 'http://localhost:8080';
 
   constructor(
-    private http: HttpClient, 
+    private http: HttpClient,
     private cdr: ChangeDetectorRef,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authorizationService: AuthorizationService
   ) {
     this.salesForm = this.fb.group({
       reports: this.fb.array([])
@@ -43,6 +46,11 @@ export class SalesreportComponent {
   }
 
   onFileChange(event: Event) {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to upload sales reports.';
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
       this.file = target.files[0];
@@ -51,6 +59,11 @@ export class SalesreportComponent {
   }
 
   submit() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to upload sales reports.';
+      return;
+    }
+
     if (!this.file) {
       this.errorMessage = 'Please select a file first';
       return;
@@ -58,10 +71,10 @@ export class SalesreportComponent {
 
     this.isLoading = true;
     this.clearMessages();
-    
+
     const formData = new FormData();
     formData.append('file', this.file, this.file.name);
-    
+
     this.http.post<any[]>(this.apiBase + '/loans/readExcel', formData).subscribe(
       response => {
         const sanitized = this.normalizeUploadedReports(response ?? []);
@@ -102,6 +115,11 @@ export class SalesreportComponent {
   }
 
   saveData() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to save sales reports.';
+      return;
+    }
+
     if (this.reportsFormArray.invalid) {
       this.errorMessage = 'Please fix validation errors before saving';
       this.markFormGroupTouched(this.salesForm);
@@ -118,8 +136,8 @@ export class SalesreportComponent {
     this.clearMessages();
 
     const formData = this.reportsFormArray.value;
-    
-    this.http.post<any[]>(this.apiBase + '/loans/saveSalesReport/' + this.id, formData).subscribe(    
+
+    this.http.post<any[]>(this.apiBase + '/loans/saveSalesReport/' + this.id, formData).subscribe(
       response => {
         this.isLoading = false;
         this.successMessage = 'Data saved successfully!';
@@ -138,7 +156,7 @@ export class SalesreportComponent {
   fetchData(appId: number) {
     this.isLoading = true;
     this.clearMessages();
-    
+
     this.http.get<any[]>(this.apiBase + '/loans/getSalesReportDetails/' + appId).subscribe(
       response => {
         this.data = response;
@@ -155,6 +173,11 @@ export class SalesreportComponent {
   }
 
   editForm() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to edit sales reports.';
+      return;
+    }
+
     this.isEditing = !this.isEditing;
     if (this.isEditing && this.data.length > 0) {
       this.populateForm(this.data);
@@ -162,15 +185,30 @@ export class SalesreportComponent {
   }
 
   addNewReport() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to add sales records.';
+      return;
+    }
+
     this.reportsFormArray.push(this.createReportGroup());
     this.isEditing = true;
   }
 
   removeReport(index: number) {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to remove sales records.';
+      return;
+    }
+
     this.reportsFormArray.removeAt(index);
   }
 
   cancelEdit() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to edit sales reports.';
+      return;
+    }
+
     this.isEditing = false;
     if (this.data.length > 0) {
       this.populateForm(this.data);
@@ -226,6 +264,7 @@ export class SalesreportComponent {
   }
 
   ngOnInit(): void {
+    this.canEdit = this.authorizationService.canEditSalesReport();
     this.id = new URLSearchParams(window.location.search).get('id');
     if (this.id) {
       this.fetchData(Number(this.id));

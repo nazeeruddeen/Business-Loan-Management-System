@@ -1,5 +1,4 @@
 <div class="container-fluid">
-  <!-- Header Section -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card shadow-sm">
@@ -8,17 +7,17 @@
             <i class="bi bi-people-fill me-2"></i>
             Assurance Details
           </h5>
-          <button 
-            class="btn btn-light btn-sm" 
-            (click)="editForm()" 
+          <button
+            *ngIf="canEdit"
+            class="btn btn-light btn-sm"
+            (click)="editForm()"
             [disabled]="data.length === 0">
             <i class="bi bi-pencil-square me-1"></i>
             {{ isEditing ? 'View Mode' : 'Edit Mode' }}
           </button>
         </div>
         <div class="card-body">
-          <!-- File Upload Section -->
-          <div class="row mb-4">
+          <div class="row mb-4" *ngIf="canEdit">
             <div class="col-md-6">
               <div class="card border-secondary">
                 <div class="card-header bg-light">
@@ -30,16 +29,16 @@
                 <div class="card-body">
                   <div class="mb-3">
                     <label for="fileInput" class="form-label">Select JSON File (.json)</label>
-                    <input 
-                      type="file" 
-                      class="form-control" 
+                    <input
+                      type="file"
+                      class="form-control"
                       id="fileInput"
                       accept=".json"
                       (change)="onFileChange($event)">
                   </div>
-                  <button 
-                    class="btn btn-primary" 
-                    (click)="submit()" 
+                  <button
+                    class="btn btn-primary"
+                    (click)="submit()"
                     [disabled]="!file || isLoading">
                     <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                     <i class="bi bi-file-earmark-arrow-up me-2"></i>
@@ -49,7 +48,6 @@
               </div>
             </div>
             <div class="col-md-6">
-              <!-- Messages Section -->
               <div class="alert alert-danger" *ngIf="errorMessage">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ errorMessage }}
@@ -61,31 +59,34 @@
             </div>
           </div>
 
-          <!-- Data Display/Edit Section -->
-          <div *ngIf="data.length > 0 || personsFormArray.length > 0">
+          <div *ngIf="!canEdit" class="alert alert-info">
+            You have read-only access to assurance details.
+          </div>
+
+          <div *ngIf="canEdit && data.length > 0 || personsFormArray.length > 0">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h6 class="mb-0">
                 <i class="bi bi-table me-2"></i>
                 Person Details {{ isEditing ? '(Edit Mode)' : '(View Mode)' }}
               </h6>
-              <div>
-                <button 
-                  *ngIf="isEditing" 
-                  class="btn btn-success btn-sm me-2" 
+              <div *ngIf="canEdit">
+                <button
+                  *ngIf="isEditing"
+                  class="btn btn-success btn-sm me-2"
                   (click)="addNewPerson()">
                   <i class="bi bi-plus-circle me-1"></i>
                   Add Person
                 </button>
-                <button 
-                  *ngIf="isEditing" 
-                  class="btn btn-secondary btn-sm me-2" 
+                <button
+                  *ngIf="isEditing"
+                  class="btn btn-secondary btn-sm me-2"
                   (click)="cancelEdit()">
                   <i class="bi bi-x-circle me-1"></i>
                   Cancel
                 </button>
-                <button 
-                  class="btn btn-primary btn-sm" 
-                  (click)="saveData()" 
+                <button
+                  class="btn btn-primary btn-sm"
+                  (click)="saveData()"
                   [disabled]="isLoading">
                   <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                   <i class="bi bi-save me-1"></i>
@@ -94,7 +95,6 @@
               </div>
             </div>
 
-            <!-- Data Table -->
             <div class="table-responsive">
               <table class="table table-bordered table-hover">
                 <thead class="table-light">
@@ -105,12 +105,11 @@
                     <th>Age (18-100)</th>
                     <th>Email</th>
                     <th>Gender</th>
-                    <th *ngIf="isEditing">Actions</th>
+                    <th *ngIf="isEditing && canEdit">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- View Mode -->
-                  <ng-container *ngIf="!isEditing">
+                  <ng-container *ngIf="!isEditing || !canEdit">
                     <tr *ngFor="let person of data">
                       <td>{{ person.id }}</td>
                       <td>{{ person.ename }}</td>
@@ -123,21 +122,20 @@
                     </tr>
                   </ng-container>
 
-                  <!-- Edit Mode -->
-                  <ng-container *ngIf="isEditing">
+                  <ng-container *ngIf="isEditing && canEdit">
                     <tr *ngFor="let person of personsFormArray.controls; let i = index">
                       <ng-container [formGroup]="getPersonGroup(i)">
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm" 
-                            formControlName="id" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm"
+                            formControlName="id"
                             readonly>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="ename"
                             [ngClass]="{'is-invalid': getPersonGroup(i).get('ename')?.invalid && getPersonGroup(i).get('ename')?.touched}">
                           <div class="invalid-feedback" *ngIf="getPersonGroup(i).get('ename')?.invalid && getPersonGroup(i).get('ename')?.touched">
@@ -145,9 +143,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="nationality"
                             [ngClass]="{'is-invalid': getPersonGroup(i).get('nationality')?.invalid && getPersonGroup(i).get('nationality')?.touched}">
                           <div class="invalid-feedback" *ngIf="getPersonGroup(i).get('nationality')?.invalid && getPersonGroup(i).get('nationality')?.touched">
@@ -155,9 +153,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm"
                             formControlName="age"
                             [ngClass]="{'is-invalid': getPersonGroup(i).get('age')?.invalid && getPersonGroup(i).get('age')?.touched}">
                           <div class="invalid-feedback" *ngIf="getPersonGroup(i).get('age')?.invalid && getPersonGroup(i).get('age')?.touched">
@@ -165,9 +163,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="email" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="email"
+                            class="form-control form-control-sm"
                             formControlName="mail"
                             [ngClass]="{'is-invalid': getPersonGroup(i).get('mail')?.invalid && getPersonGroup(i).get('mail')?.touched}">
                           <div class="invalid-feedback" *ngIf="getPersonGroup(i).get('mail')?.invalid && getPersonGroup(i).get('mail')?.touched">
@@ -175,8 +173,8 @@
                           </div>
                         </td>
                         <td>
-                          <select 
-                            class="form-select form-select-sm" 
+                          <select
+                            class="form-select form-select-sm"
                             formControlName="gender"
                             [ngClass]="{'is-invalid': getPersonGroup(i).get('gender')?.invalid && getPersonGroup(i).get('gender')?.touched}">
                             <option value="">Select Gender</option>
@@ -189,8 +187,8 @@
                           </div>
                         </td>
                         <td>
-                          <button 
-                            class="btn btn-danger btn-sm" 
+                          <button
+                            class="btn btn-danger btn-sm"
                             (click)="removePerson(i)"
                             [disabled]="personsFormArray.length <= 1">
                             <i class="bi bi-trash"></i>
@@ -204,7 +202,6 @@
             </div>
           </div>
 
-          <!-- Empty State -->
           <div *ngIf="data.length === 0 && personsFormArray.length === 0" class="text-center py-5">
             <i class="bi bi-inbox display-1 text-muted"></i>
             <h5 class="text-muted mt-3">No Data Available</h5>
@@ -215,4 +212,3 @@
     </div>
   </div>
 </div>
-

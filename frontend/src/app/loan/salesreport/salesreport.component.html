@@ -1,5 +1,4 @@
 <div class="container-fluid">
-  <!-- Header Section -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card shadow-sm">
@@ -8,17 +7,17 @@
             <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>
             Sales Report
           </h5>
-          <button 
-            class="btn btn-light btn-sm" 
-            (click)="editForm()" 
+          <button
+            *ngIf="canEdit"
+            class="btn btn-light btn-sm"
+            (click)="editForm()"
             [disabled]="data.length === 0">
             <i class="bi bi-pencil-square me-1"></i>
             {{ isEditing ? 'View Mode' : 'Edit Mode' }}
           </button>
         </div>
         <div class="card-body">
-          <!-- File Upload Section -->
-          <div class="row mb-4">
+          <div class="row mb-4" *ngIf="canEdit">
             <div class="col-md-6">
               <div class="card border-secondary">
                 <div class="card-header bg-light">
@@ -30,16 +29,16 @@
                 <div class="card-body">
                   <div class="mb-3">
                     <label for="fileInput" class="form-label">Select Excel File (.xlsx)</label>
-                    <input 
-                      type="file" 
-                      class="form-control" 
+                    <input
+                      type="file"
+                      class="form-control"
                       id="fileInput"
                       accept=".xlsx,.xls"
                       (change)="onFileChange($event)">
                   </div>
-                  <button 
-                    class="btn btn-success" 
-                    (click)="submit()" 
+                  <button
+                    class="btn btn-success"
+                    (click)="submit()"
                     [disabled]="!file || isLoading">
                     <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                     <i class="bi bi-file-earmark-arrow-up me-2"></i>
@@ -49,7 +48,6 @@
               </div>
             </div>
             <div class="col-md-6">
-              <!-- Messages Section -->
               <div class="alert alert-danger" *ngIf="errorMessage">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ errorMessage }}
@@ -61,31 +59,34 @@
             </div>
           </div>
 
-          <!-- Data Display/Edit Section -->
+          <div *ngIf="!canEdit" class="alert alert-info">
+            You have read-only access to sales reports.
+          </div>
+
           <div *ngIf="data.length > 0 || reportsFormArray.length > 0">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h6 class="mb-0">
                 <i class="bi bi-table me-2"></i>
                 Sales Data {{ isEditing ? '(Edit Mode)' : '(View Mode)' }}
               </h6>
-              <div>
-                <button 
-                  *ngIf="isEditing" 
-                  class="btn btn-success btn-sm me-2" 
+              <div *ngIf="canEdit">
+                <button
+                  *ngIf="isEditing"
+                  class="btn btn-success btn-sm me-2"
                   (click)="addNewReport()">
                   <i class="bi bi-plus-circle me-1"></i>
                   Add Report
                 </button>
-                <button 
-                  *ngIf="isEditing" 
-                  class="btn btn-secondary btn-sm me-2" 
+                <button
+                  *ngIf="isEditing"
+                  class="btn btn-secondary btn-sm me-2"
                   (click)="cancelEdit()">
                   <i class="bi bi-x-circle me-1"></i>
                   Cancel
                 </button>
-                <button 
-                  class="btn btn-primary btn-sm" 
-                  (click)="saveData()" 
+                <button
+                  class="btn btn-primary btn-sm"
+                  (click)="saveData()"
                   [disabled]="isLoading">
                   <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                   <i class="bi bi-save me-1"></i>
@@ -94,7 +95,6 @@
               </div>
             </div>
 
-            <!-- Data Table -->
             <div class="table-responsive">
               <table class="table table-bordered table-hover">
                 <thead class="table-light">
@@ -107,12 +107,11 @@
                     <th>Total Amount</th>
                     <th>Received/Paid Amount</th>
                     <th>Balance Amount</th>
-                    <th *ngIf="isEditing">Actions</th>
+                    <th *ngIf="isEditing && canEdit">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- View Mode -->
-                  <ng-container *ngIf="!isEditing">
+                  <ng-container *ngIf="!isEditing || !canEdit">
                     <tr *ngFor="let report of data">
                       <td>{{ report.date }}</td>
                       <td>{{ report.orderno }}</td>
@@ -125,14 +124,13 @@
                     </tr>
                   </ng-container>
 
-                  <!-- Edit Mode -->
-                  <ng-container *ngIf="isEditing">
+                  <ng-container *ngIf="isEditing && canEdit">
                     <tr *ngFor="let report of reportsFormArray.controls; let i = index">
                       <ng-container [formGroup]="getReportGroup(i)">
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             placeholder="DD/MM/YYYY"
                             formControlName="date"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('date')?.invalid && getReportGroup(i).get('date')?.touched}">
@@ -141,9 +139,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="orderno"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('orderno')?.invalid && getReportGroup(i).get('orderno')?.touched}">
                           <div class="invalid-feedback" *ngIf="getReportGroup(i).get('orderno')?.invalid && getReportGroup(i).get('orderno')?.touched">
@@ -151,9 +149,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="invoiceno"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('invoiceno')?.invalid && getReportGroup(i).get('invoiceno')?.touched}">
                           <div class="invalid-feedback" *ngIf="getReportGroup(i).get('invoiceno')?.invalid && getReportGroup(i).get('invoiceno')?.touched">
@@ -161,9 +159,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="partyName"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('partyName')?.invalid && getReportGroup(i).get('partyName')?.touched}">
                           <div class="invalid-feedback" *ngIf="getReportGroup(i).get('partyName')?.invalid && getReportGroup(i).get('partyName')?.touched">
@@ -171,9 +169,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="partyPhoneNum"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('partyPhoneNum')?.invalid && getReportGroup(i).get('partyPhoneNum')?.touched}">
                           <div class="invalid-feedback" *ngIf="getReportGroup(i).get('partyPhoneNum')?.invalid && getReportGroup(i).get('partyPhoneNum')?.touched">
@@ -181,9 +179,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm text-end" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm text-end"
                             step="0.01"
                             formControlName="totalAmount"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('totalAmount')?.invalid && getReportGroup(i).get('totalAmount')?.touched}">
@@ -192,9 +190,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm text-end" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm text-end"
                             step="0.01"
                             formControlName="recievedOrPaidAmount"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('recievedOrPaidAmount')?.invalid && getReportGroup(i).get('recievedOrPaidAmount')?.touched}">
@@ -203,9 +201,9 @@
                           </div>
                         </td>
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm text-end" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm text-end"
                             step="0.01"
                             formControlName="balanceAmount"
                             [ngClass]="{'is-invalid': getReportGroup(i).get('balanceAmount')?.invalid && getReportGroup(i).get('balanceAmount')?.touched}">
@@ -214,8 +212,8 @@
                           </div>
                         </td>
                         <td>
-                          <button 
-                            class="btn btn-danger btn-sm" 
+                          <button
+                            class="btn btn-danger btn-sm"
                             (click)="removeReport(i)"
                             [disabled]="reportsFormArray.length <= 1">
                             <i class="bi bi-trash"></i>
@@ -229,7 +227,6 @@
             </div>
           </div>
 
-          <!-- Empty State -->
           <div *ngIf="data.length === 0 && reportsFormArray.length === 0" class="text-center py-5">
             <i class="bi bi-file-earmark-spreadsheet display-1 text-muted"></i>
             <h5 class="text-muted mt-3">No Sales Data Available</h5>
@@ -240,4 +237,3 @@
     </div>
   </div>
 </div>
-

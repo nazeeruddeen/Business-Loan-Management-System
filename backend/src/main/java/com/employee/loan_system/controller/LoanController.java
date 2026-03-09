@@ -6,6 +6,7 @@ import com.employee.loan_system.service.LoanService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,29 +22,31 @@ public class LoanController {
     @Autowired
     private FileProcessingService fileProcessingService;
 
-    // Loan Application APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/applyLoan")
     public ResponseEntity<LoanApplicationDTO> applyLoan(@RequestBody LoanApplicationDTO dto) {
         return new ResponseEntity<>(loanService.applyLoan(dto), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/loanTaskboard")
     public ResponseEntity<List<LoanApplicationDTO>> getLoanTaskboard() {
         return new ResponseEntity<>(loanService.getLoanTaskboardData(), HttpStatus.OK);
     }
 
-    // Overview API
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/getOverviewDeatils/{appId}")
     public ResponseEntity<OverviewDTO> getOverviewDetails(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getOverviewDetails(appId), HttpStatus.OK);
     }
 
-    // Company Details APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/getCompanyDetails/{appId}")
     public ResponseEntity<CompanyDetailsDTO> getCompanyDetails(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getCompanyDetails(appId), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/saveCompanyDetails/{appId}")
     public ResponseEntity<CompanyDetailsDTO> saveCompanyDetails(
             @PathVariable Long appId,
@@ -51,12 +54,13 @@ public class LoanController {
         return new ResponseEntity<>(loanService.saveCompanyDetails(appId, dto), HttpStatus.OK);
     }
 
-    // Company Address APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/getCompanyAddress/{appId}")
     public ResponseEntity<CompanyAddressDTO> getCompanyAddress(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getCompanyAddress(appId), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/saveCompanyAddress/{appId}")
     public ResponseEntity<CompanyAddressDTO> saveCompanyAddress(
             @PathVariable Long appId,
@@ -64,12 +68,13 @@ public class LoanController {
         return new ResponseEntity<>(loanService.saveCompanyAddress(appId, dto), HttpStatus.OK);
     }
 
-    // Business Product APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/getProductDetails/{appId}")
     public ResponseEntity<BusinessProductDTO> getProductDetails(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getProductDetails(appId), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/saveProductDetails/{appId}")
     public ResponseEntity<BusinessProductDTO> saveProductDetails(
             @PathVariable Long appId,
@@ -77,7 +82,7 @@ public class LoanController {
         return new ResponseEntity<>(loanService.saveProductDetails(appId, dto), HttpStatus.OK);
     }
 
-    // Person Details (Assurance) APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/readJson")
     public ResponseEntity<List<PersonDetailsDTO>> readJsonFile(@RequestParam("file") MultipartFile file) {
         try {
@@ -91,6 +96,7 @@ public class LoanController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/saveJsonfileData/{appId}")
     public ResponseEntity<?> savePersonDetails(
             @PathVariable Long appId,
@@ -107,12 +113,13 @@ public class LoanController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @GetMapping("/getPersonDetails/{appId}")
     public ResponseEntity<List<PersonDetailsDTO>> getPersonDetails(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getPersonDetails(appId), HttpStatus.OK);
     }
 
-    // Sales Report APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/readExcel")
     public ResponseEntity<List<SalesReportDTO>> readExcelFile(@RequestParam("file") MultipartFile file) {
         try {
@@ -126,6 +133,7 @@ public class LoanController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/saveSalesReport/{appId}")
     public ResponseEntity<?> saveSalesReport(
             @PathVariable Long appId,
@@ -142,12 +150,13 @@ public class LoanController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST')")
     @GetMapping("/getSalesReportDetails/{appId}")
     public ResponseEntity<List<SalesReportDTO>> getSalesReportDetails(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getSalesReportDetails(appId), HttpStatus.OK);
     }
 
-    // Transaction APIs
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST')")
     @GetMapping("/fetchtransactions/{appId}")
     public ResponseEntity<List<TransactionDTO>> getTransactions(
             @PathVariable Long appId,
@@ -157,6 +166,7 @@ public class LoanController {
         return new ResponseEntity<>(loanService.getTransactions(appId, duration, startDate, endDate), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST')")
     @GetMapping("/filtertransactions/{appId}")
     public ResponseEntity<List<TransactionDTO>> filterTransactions(
             @PathVariable Long appId,
@@ -178,11 +188,14 @@ public class LoanController {
         return new ResponseEntity<>(
                 loanService.filterTransactions(appId, legacyMode, legacyTypes), HttpStatus.OK);
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST')")
     @GetMapping("/getTxnsData/{appId}")
     public ResponseEntity<List<TransactionDTO>> getTxnsData(@PathVariable Long appId) {
         return new ResponseEntity<>(loanService.getTransactions(appId, null, null, null), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/updateTransaction")
     public ResponseEntity<TransactionDTO> updateTransaction(@RequestBody TransactionDTO dto) {
         try {
@@ -193,6 +206,7 @@ public class LoanController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/sales/saveTxnsData/{appId}")
     public ResponseEntity<List<TransactionDTO>> saveTransactions(
             @PathVariable Long appId,
@@ -200,6 +214,7 @@ public class LoanController {
         return new ResponseEntity<>(loanService.saveTransactions(appId, dtos), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/sales/readTransactionsCsv")
     public ResponseEntity<?> readTransactionsCsv(@RequestParam("file") MultipartFile file) {
         try {
@@ -213,4 +228,3 @@ public class LoanController {
         }
     }
 }
-

@@ -255,3 +255,18 @@ mat-sidenav {
   border-radius: 10px;
 }
 
+
+.content-area.auth-route {
+  padding: 0;
+}
+
+.btn-logout {
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+
+.btn-admin-users {
+  border-radius: 20px;
+  font-weight: 600;
+}

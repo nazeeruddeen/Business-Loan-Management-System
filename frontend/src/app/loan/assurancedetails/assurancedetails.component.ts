@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component } from '@angular/core';
-import { FormBuilder, FormGroup, FormArray, Validators, FormControl } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { environment } from '../../../environments/environment';
+import { AuthorizationService } from '../../auth/authorization.service';
 
 @Component({
   selector: 'app-assurancedetails',
@@ -19,14 +20,16 @@ export class AssurancedetailsComponent {
   isLoading = false;
   errorMessage = '';
   successMessage = '';
-  
+  canEdit = false;
+
   personForm: FormGroup;
   private readonly apiBase = environment.hostname?.trim?.() ? environment.hostname.trim() : 'http://localhost:8080';
 
   constructor(
-    private http: HttpClient, 
+    private http: HttpClient,
     private cdr: ChangeDetectorRef,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private authorizationService: AuthorizationService
   ) {
     this.personForm = this.fb.group({
       persons: this.fb.array([])
@@ -43,6 +46,11 @@ export class AssurancedetailsComponent {
   }
 
   onFileChange(event: Event) {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to upload assurance data.';
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     if (target.files && target.files.length > 0) {
       this.file = target.files[0];
@@ -51,6 +59,11 @@ export class AssurancedetailsComponent {
   }
 
   submit() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to upload assurance data.';
+      return;
+    }
+
     if (!this.file) {
       this.errorMessage = 'Please select a file first';
       return;
@@ -58,10 +71,10 @@ export class AssurancedetailsComponent {
 
     this.isLoading = true;
     this.clearMessages();
-    
+
     const formData = new FormData();
     formData.append('file', this.file, this.file.name);
-    
+
     this.http.post<any[]>(this.apiBase + '/loans/readJson', formData).subscribe(
       response => {
         this.data = response;
@@ -97,6 +110,11 @@ export class AssurancedetailsComponent {
   }
 
   saveData() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to save assurance data.';
+      return;
+    }
+
     if (this.personsFormArray.invalid) {
       this.errorMessage = 'Please fix validation errors before saving';
       this.markFormGroupTouched(this.personForm);
@@ -113,8 +131,8 @@ export class AssurancedetailsComponent {
     this.clearMessages();
 
     const formData = this.personsFormArray.value;
-    
-    this.http.post<any[]>(this.apiBase + '/loans/saveJsonfileData/' + this.id, formData).subscribe(    
+
+    this.http.post<any[]>(this.apiBase + '/loans/saveJsonfileData/' + this.id, formData).subscribe(
       response => {
         this.isLoading = false;
         this.successMessage = 'Data saved successfully!';
@@ -133,7 +151,7 @@ export class AssurancedetailsComponent {
   fetchData(appId: number) {
     this.isLoading = true;
     this.clearMessages();
-    
+
     this.http.get<any[]>(this.apiBase + '/loans/getPersonDetails/' + appId).subscribe(
       response => {
         this.data = response;
@@ -150,6 +168,11 @@ export class AssurancedetailsComponent {
   }
 
   editForm() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to edit assurance data.';
+      return;
+    }
+
     this.isEditing = !this.isEditing;
     if (this.isEditing && this.data.length > 0) {
       this.populateForm(this.data);
@@ -157,15 +180,30 @@ export class AssurancedetailsComponent {
   }
 
   addNewPerson() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to add assurance records.';
+      return;
+    }
+
     this.personsFormArray.push(this.createPersonGroup());
     this.isEditing = true;
   }
 
   removePerson(index: number) {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to remove assurance records.';
+      return;
+    }
+
     this.personsFormArray.removeAt(index);
   }
 
   cancelEdit() {
+    if (!this.canEdit) {
+      this.errorMessage = 'You do not have permission to edit assurance data.';
+      return;
+    }
+
     this.isEditing = false;
     if (this.data.length > 0) {
       this.populateForm(this.data);
@@ -193,6 +231,7 @@ export class AssurancedetailsComponent {
   }
 
   ngOnInit(): void {
+    this.canEdit = this.authorizationService.canEditAssurance();
     this.id = new URLSearchParams(window.location.search).get('id');
     if (this.id) {
       this.fetchData(Number(this.id));

@@ -15,6 +15,7 @@ import { AssurancedetailsComponent } from '../assurancedetails/assurancedetails.
 import { CompanyDetailsComponent } from '../company-details/company-details.component';
 import { BusinessProductComponent } from '../business-product/business-product.component';
 import { CompanyAddressComponent } from '../company-address/company-address.component';
+import { AuthorizationService } from '../../auth/authorization.service';
 
 const TAB_KEYS = ['overview', 'business-product', 'company-details', 'company-address', 'assurancedetails', 'salesreport', 'transactions', 'txn-filters', 'txn-statement'];
 
@@ -34,6 +35,7 @@ export class OverviewComponent implements OnDestroy {
   isLoading = false;
   loadError: string | null = null;
   selectedTabIndex = 0;
+  visibleTabKeys: string[] = [];
   private querySub?: Subscription;
 
   constructor(
@@ -41,11 +43,17 @@ export class OverviewComponent implements OnDestroy {
     private formBuilder: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
-    private location: Location
+    private location: Location,
+    private authorizationService: AuthorizationService
   ) {}
 
   ngOnInit() {
     this.id = this.route.snapshot.queryParams['id'] || this.route.parent?.snapshot?.queryParams['id'] || new URLSearchParams(window.location.search).get('id');
+    this.visibleTabKeys = this.authorizationService.getVisibleLoanTabs();
+    if (this.visibleTabKeys.length === 0) {
+      this.visibleTabKeys = ['overview'];
+    }
+
     this.syncTabFromUrl();
     this.querySub = this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
@@ -70,10 +78,19 @@ export class OverviewComponent implements OnDestroy {
     }
   }
 
+  hasTab(tabKey: string): boolean {
+    return this.visibleTabKeys.includes(tabKey);
+  }
+
   private syncTabFromUrl() {
     const queryTab = this.route.snapshot.queryParams['tab'] || this.route.parent?.snapshot?.queryParams['tab'];
     if (queryTab) {
-      const queryIndex = TAB_KEYS.indexOf(queryTab);
+      if (!this.hasTab(queryTab)) {
+        this.redirectToFirstAllowedTab();
+        return;
+      }
+
+      const queryIndex = this.visibleTabKeys.indexOf(queryTab);
       if (queryIndex >= 0 && queryIndex !== this.selectedTabIndex) {
         this.selectedTabIndex = queryIndex;
       }
@@ -83,15 +100,39 @@ export class OverviewComponent implements OnDestroy {
     const path = this.router.url.split('?')[0];
     const seg = path.split('/').pop() || '';
     const idx = TAB_KEYS.indexOf(seg);
-    if (idx >= 0 && idx !== this.selectedTabIndex) {
-      this.selectedTabIndex = idx;
-    } else if (seg === '' || seg === 'loan') {
-      this.selectedTabIndex = 0;
+
+    if (idx >= 0 && this.hasTab(seg)) {
+      const visibleIdx = this.visibleTabKeys.indexOf(seg);
+      if (visibleIdx >= 0 && visibleIdx !== this.selectedTabIndex) {
+        this.selectedTabIndex = visibleIdx;
+      }
+    } else {
+      const overviewIndex = this.visibleTabKeys.indexOf('overview');
+      this.selectedTabIndex = overviewIndex >= 0 ? overviewIndex : 0;
     }
   }
+
+  private redirectToFirstAllowedTab() {
+    const firstAllowed = this.visibleTabKeys[0] || 'overview';
+    const queryParams: { [key: string]: string } = { tab: firstAllowed };
+    if (this.id) {
+      queryParams['id'] = this.id;
+    }
+
+    this.selectedTabIndex = 0;
+    this.router.navigate(['/loan/overview'], {
+      queryParams,
+      replaceUrl: true
+    });
+  }
+
   onTabChange(index: number) {
+    if (index < 0 || index >= this.visibleTabKeys.length) {
+      return;
+    }
+
     this.selectedTabIndex = index;
-    const tabKey = TAB_KEYS[index] || TAB_KEYS[0];
+    const tabKey = this.visibleTabKeys[index] || this.visibleTabKeys[0] || 'overview';
     const queryParams: { [key: string]: string } = { tab: tabKey };
     if (this.id) {
       queryParams['id'] = this.id;
@@ -102,6 +143,7 @@ export class OverviewComponent implements OnDestroy {
       replaceUrl: true
     });
   }
+
   onSubmit() {
     this.employeeDataService.saveLoanApplication(this.loanForm.value).subscribe((response: HttpResponse<any>) => {
     });
@@ -113,7 +155,7 @@ export class OverviewComponent implements OnDestroy {
   showLoanData() {
     this.location.back();
   }
-  
+
 
   createFromGroup() {
     this.loanForm = this.formBuilder.group({
@@ -128,4 +170,3 @@ export class OverviewComponent implements OnDestroy {
     this.querySub?.unsubscribe();
   }
 }
-

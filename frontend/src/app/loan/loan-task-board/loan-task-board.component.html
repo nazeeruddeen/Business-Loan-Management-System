@@ -1,7 +1,7 @@
 <div class="taskboard-wrapper" *ngIf="!showOverviewData">
   <div class="loan-data-section">
     <div class="loan-header">
-      <button mat-raised-button color="primary" (click)="openDialog()" class="btn-apply">Apply Loan</button>
+      <button *ngIf="canApplyLoan" mat-raised-button color="primary" (click)="openDialog()" class="btn-apply">Apply Loan</button>
       <span class="page-title-inline">Taskboard</span>
     </div>
     <mat-spinner *ngIf="isLoading" diameter="40" class="loading-spinner"></mat-spinner>
@@ -22,7 +22,7 @@
           <th mat-header-cell *matHeaderCellDef> Mobile </th>
           <td mat-cell *matCellDef="let element"> {{element.mobile}}</td>
         </ng-container>
-   
+
        <ng-container matColumnDef="city">
          <th mat-header-cell *matHeaderCellDef> City </th>
          <td mat-cell *matCellDef="let element"> {{element.city}}</td>

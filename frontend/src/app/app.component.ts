@@ -8,30 +8,31 @@ import { FormBuilder } from '@angular/forms';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { EmployeeDataService } from './employee-data.service';
 import { SharedModule } from './shared/shared.module';
-import { CommonModule, DatePipe } from '@angular/common';
-import { IpThemeService } from './ip-theme.service';
+import { CommonModule } from '@angular/common';
 import { ThemeService } from './theme.service';
-
+import { AuthService } from './auth/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, SharedModule,RouterModule,CommonModule],
+  imports: [RouterOutlet, SharedModule, RouterModule, CommonModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent implements OnDestroy {
   title = 'employee';
-  showTaskboard: boolean = false;
-  showLoanboard: boolean = false;
+  showTaskboard = false;
+  showLoanboard = false;
   employeeData: any;
   employeeForm: any;
   displayedColumns: string[] | undefined;
-  createNew: boolean = false;
+  createNew = false;
   reverse = true;
-  showFilterData: boolean = false;
+  showFilterData = false;
   id: string | null = '';
   isHomeRoute = false;
+  isLoginRoute = false;
+  currentRole: string | null = null;
 
   constructor(
     private employeeDataService: EmployeeDataService,
@@ -39,8 +40,10 @@ export class AppComponent implements OnDestroy {
     private dialog: MatDialog,
     private themeService: ThemeService,
     private router: Router,
-    private refreshService: EmployeeListRefreshService
+    private refreshService: EmployeeListRefreshService,
+    private authService: AuthService
   ) {}
+
   isDarkTheme = false;
   private themeSub?: Subscription;
 
@@ -52,26 +55,24 @@ export class AppComponent implements OnDestroy {
       this.themeService.setDarkThemeClass(v);
     });
     this.themeService.ensureOverlayTheme();
+
     this.id = new URLSearchParams(window.location.search).get('id');
     this.updateHomeRoute();
     this.router.events.subscribe(() => this.updateHomeRoute());
 
-    this.displayedColumns = ['id',
-      'fullname',
-      'dept',
-      'age',
-      'salary', 'operation'];
-    if (!this.id) {
+    this.displayedColumns = ['id', 'fullname', 'dept', 'age', 'salary', 'operation'];
+    if (!this.id && !this.isLoginRoute) {
       this.employeeDataService.getAllEmployeeData().subscribe((response: HttpResponse<any>) => {
         this.employeeData = response.body;
       });
     }
-
   }
- 
+
   private updateHomeRoute() {
     const url = this.router.url;
     this.isHomeRoute = url === '' || url === '/' || url === '/employee';
+    this.isLoginRoute = url.startsWith('/login');
+    this.currentRole = this.authService.getRole();
   }
 
   openAddEmployeeDialog() {
@@ -84,6 +85,7 @@ export class AppComponent implements OnDestroy {
     }
     const ref = this.dialog.open(AddEmployeeComponent, dialogConfig);
     this.themeService.ensureOverlayTheme();
+    this.currentRole = this.authService.getRole();
     ref.afterClosed().subscribe((result) => {
       if (result?.success) {
         this.refreshService.requestRefresh();
@@ -91,42 +93,64 @@ export class AppComponent implements OnDestroy {
     });
   }
 
+  goToUserAdmin() {
+    this.router.navigate(['/admin/users']);
+  }
+
   toggleTheme() {
     this.themeService.toggleTheme();
     this.isDarkTheme = this.themeService.isDarkTheme.value;
   }
+
+  logout() {
+    this.authService.logout(true);
+  }
+
+  hasAnyRole(...roles: string[]): boolean {
+    const role = this.currentRole?.toUpperCase();
+    return !!role && roles.map((r) => r.toUpperCase()).includes(role);
+  }
+
   showFilterdataScreen() {
     this.showFilterData = true;
   }
+
   showTaskboardData() {
     this.showTaskboard = true;
   }
+
   showloanData() {
     this.showLoanboard = true;
     this.showTaskboard = false;
     this.showFilterData = false;
   }
+
   showEmployeeData() {
     this.showLoanboard = false;
     this.showTaskboard = true;
     this.showFilterData = true;
   }
+
   back() {
     this.showTaskboard = false;
     this.showFilterData = false;
     this.showLoanboard = false;
   }
+
   addNew() {
     this.employeeForm.reset();
     this.createNew = true;
   }
-  saveNewEmployee() {
 
+  saveNewEmployee() {
+    
   }
+
   updateEmployee(employee: any) {
     this.createNew = true;
     this.employeeForm.patchValue(employee);
   }
+
   openDialog(data?: any) {
     const dialogConfig = new MatDialogConfig();
     dialogConfig.disableClose = true;
@@ -143,20 +167,17 @@ export class AppComponent implements OnDestroy {
   }
 
   deleteEmployee(id: any) {
-    this.employeeDataService.deleteEmployeeById(id).subscribe((response: HttpResponse<any>) => {
+    this.employeeDataService.deleteEmployeeById(id).subscribe((_response: HttpResponse<any>) => {
     });
   }
-  sortData(property: any, orderType: string) {
 
+  sortData(property: any, orderType: string) {
     this.employeeDataService.sortingEmployee(property, orderType).subscribe((response: HttpResponse<any>) => {
       this.employeeData = response.body;
-    })
-
+    });
   }
+
   ngOnDestroy() {
     this.themeSub?.unsubscribe();
   }
-
- 
 }
-

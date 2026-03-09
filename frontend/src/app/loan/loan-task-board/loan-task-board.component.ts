@@ -9,6 +9,7 @@ import { ThemeService } from '../../theme.service';
 import { SharedModule } from '../../shared/shared.module';
 import { LoanApplicationComponent } from '../loan-application/loan-application.component';
 import { OverviewComponent } from '../overview/overview.component';
+import { AuthorizationService } from '../../auth/authorization.service';
 
 
 @Component({
@@ -24,6 +25,7 @@ export class LoanTaskBoardComponent implements OnDestroy {
   showOverviewData = false;
   id: any;
   isLoading = false;
+  canApplyLoan = false;
   private routeSub?: Subscription;
 
   constructor(
@@ -31,11 +33,13 @@ export class LoanTaskBoardComponent implements OnDestroy {
     private dialog: MatDialog,
     private router: Router,
     private route: ActivatedRoute,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private authorizationService: AuthorizationService
   ) {}
 
   ngOnInit() {
     this.displayedColumns = ['appId', 'customerName', 'mailId', 'mobile', 'city'];
+    this.canApplyLoan = this.authorizationService.canApplyLoan();
     this.loadLoanData();
     this.updateViewFromUrl();
     this.routeSub = this.router.events.pipe(
@@ -56,6 +60,10 @@ export class LoanTaskBoardComponent implements OnDestroy {
   }
 
   openDialog(data?: any) {
+    if (!this.canApplyLoan) {
+      return;
+    }
+
     const dialogConfig = new MatDialogConfig();
     dialogConfig.disableClose = false;
     dialogConfig.autoFocus = true;

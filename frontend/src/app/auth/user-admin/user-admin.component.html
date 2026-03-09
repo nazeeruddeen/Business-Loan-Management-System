@@ -1,0 +1,212 @@
+<div class="user-admin-page">
+  <div class="header-row">
+    <h2>User Administration</h2>
+    <div class="header-actions">
+      <button mat-stroked-button color="primary" (click)="loadUsers()" [disabled]="loading || saving">
+        Refresh Users
+      </button>
+      <button mat-stroked-button color="primary" (click)="loadAuditLogs()" [disabled]="loadingAudit || saving">
+        Refresh Audit
+      </button>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
+
+  <div class="grid-layout">
+    <mat-card class="panel-card">
+      <h3>Create User</h3>
+      <form [formGroup]="createForm" (ngSubmit)="createUser()" class="form-stack">
+        <mat-form-field appearance="outline">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" autocomplete="off" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" autocomplete="new-password" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="role">
+            <mat-option *ngFor="let role of roleOptions" [value]="role">{{ role }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+          Create User
+        </button>
+      </form>
+    </mat-card>
+
+    <mat-card class="panel-card">
+      <h3>Reset Password</h3>
+      <form [formGroup]="resetForm" (ngSubmit)="resetPassword()" class="form-stack">
+        <mat-form-field appearance="outline">
+          <mat-label>User</mat-label>
+          <mat-select formControlName="userId">
+            <mat-option *ngFor="let user of users; trackBy: trackByUserId" [value]="user.id">
+              {{ user.username }} ({{ user.role }})
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>New Password</mat-label>
+          <input matInput type="password" formControlName="newPassword" autocomplete="new-password" />
+        </mat-form-field>
+
+        <button mat-raised-button color="accent" type="submit" [disabled]="saving">
+          Reset Password
+        </button>
+      </form>
+    </mat-card>
+  </div>
+
+  <mat-card class="table-card">
+    <h3>Existing Users</h3>
+
+    <mat-spinner *ngIf="loading" diameter="36" class="spinner"></mat-spinner>
+
+    <div class="table-wrap" *ngIf="!loading">
+      <table class="table table-bordered table-hover align-middle">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users; trackBy: trackByUserId">
+            <td>{{ user.id }}</td>
+            <td>
+              {{ user.username }}
+              <span *ngIf="isCurrentUser(user)" class="badge bg-info ms-2">You</span>
+            </td>
+            <td>
+              <div class="role-edit">
+                <mat-form-field appearance="outline" class="role-select">
+                  <mat-select [(value)]="selectedRoles[user.id]">
+                    <mat-option *ngFor="let role of roleOptions" [value]="role">{{ role }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <button
+                  mat-stroked-button
+                  color="primary"
+                  (click)="updateRole(user)"
+                  [disabled]="saving || selectedRoles[user.id] === user.role">
+                  Update Role
+                </button>
+              </div>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="user.active ? 'bg-success' : 'bg-secondary'">
+                {{ user.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  mat-stroked-button
+                  color="warn"
+                  (click)="toggleStatus(user)"
+                  [disabled]="saving || isCurrentUser(user)">
+                  {{ user.active ? 'Deactivate' : 'Activate' }}
+                </button>
+                <button
+                  mat-stroked-button
+                  color="accent"
+                  (click)="prepareReset(user)"
+                  [disabled]="saving">
+                  Use In Reset
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="users.length === 0">
+            <td colspan="5" class="text-center">No users found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+
+  <mat-card class="table-card audit-card">
+    <div class="audit-header-row">
+      <h3>Recent Audit Events</h3>
+      <div class="audit-actions">
+        <button mat-stroked-button color="primary" (click)="applyAuditFilters()" [disabled]="loadingAudit || exportingAudit">
+          Apply Filters
+        </button>
+        <button mat-stroked-button color="primary" (click)="clearAuditFilters()" [disabled]="loadingAudit || exportingAudit">
+          Clear
+        </button>
+        <button mat-raised-button color="primary" (click)="exportAuditCsv()" [disabled]="loadingAudit || exportingAudit">
+          {{ exportingAudit ? 'Exporting...' : 'Export CSV' }}
+        </button>
+      </div>
+    </div>
+
+    <form [formGroup]="auditFiltersForm" class="audit-filters">
+      <mat-form-field appearance="outline">
+        <mat-label>Action</mat-label>
+        <mat-select formControlName="action">
+          <mat-option *ngFor="let action of auditActionOptions" [value]="action">{{ action }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Actor Contains</mat-label>
+        <input matInput formControlName="actor" placeholder="admin" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>From</mat-label>
+        <input matInput type="datetime-local" formControlName="from" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>To</mat-label>
+        <input matInput type="datetime-local" formControlName="to" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Limit</mat-label>
+        <input matInput type="number" min="1" max="500" formControlName="limit" />
+      </mat-form-field>
+    </form>
+
+    <mat-spinner *ngIf="loadingAudit" diameter="36" class="spinner"></mat-spinner>
+
+    <div class="table-wrap" *ngIf="!loadingAudit">
+      <table class="table table-bordered table-hover align-middle">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Action</th>
+            <th>Actor</th>
+            <th>Target</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of auditLogs; trackBy: trackByAuditId">
+            <td>{{ log.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+            <td><span class="badge bg-primary">{{ log.action }}</span></td>
+            <td>{{ log.actorUsername }}</td>
+            <td>{{ log.targetUsername || '-' }}</td>
+            <td>{{ log.details || '-' }}</td>
+          </tr>
+          <tr *ngIf="auditLogs.length === 0">
+            <td colspan="5" class="text-center">No audit events found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </mat-card>
+</div>

@@ -112,7 +112,7 @@
 </mat-sidenav-container> -->
 
 <mat-sidenav-container class="example-container" [class.dark-theme]="isDarkTheme">
-  <mat-sidenav mode="side" opened class="sidebar">
+  <mat-sidenav *ngIf="!isLoginRoute" mode="side" opened class="sidebar">
     <ul class="nav navbar-nav">
       <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
         <a [routerLink]="''" (click)="back()" class="sidebar-link" matTooltip="Employee">
@@ -131,9 +131,11 @@
     </ul>
   </mat-sidenav>
   <mat-sidenav-content class="main-content">
-    <div class="content-area">
-      <div class="global-utils">
-        <button *ngIf="isHomeRoute" mat-raised-button color="primary" (click)="openAddEmployeeDialog()" class="btn-add-employee-corner">Add Employee</button>
+    <div class="content-area" [class.auth-route]="isLoginRoute">
+      <div class="global-utils" *ngIf="!isLoginRoute">
+        <button *ngIf="isHomeRoute && hasAnyRole('ADMIN','LOAN_OFFICER')" mat-raised-button color="primary" (click)="openAddEmployeeDialog()" class="btn-add-employee-corner">Add Employee</button>
+        <button *ngIf="hasAnyRole('ADMIN')" mat-stroked-button color="primary" (click)="goToUserAdmin()" class="btn-admin-users">User Admin</button>
+        <button mat-stroked-button color="primary" (click)="logout()" class="btn-logout">Logout</button>
         <button mat-icon-button (click)="toggleTheme()" matTooltip="{{ isDarkTheme ? 'Light mode' : 'Dark mode' }}">
           <mat-icon>{{ isDarkTheme ? 'light_mode' : 'dark_mode' }}</mat-icon>
         </button>
@@ -149,3 +151,9 @@
     </div>
   </mat-sidenav-content>
 </mat-sidenav-container>
+
+
+
+
+
+

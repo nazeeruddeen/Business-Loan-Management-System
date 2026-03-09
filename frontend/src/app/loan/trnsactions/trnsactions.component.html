@@ -1,5 +1,4 @@
 <div class="container-fluid">
-  <!-- Header Section -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card shadow-sm">
@@ -8,44 +7,43 @@
             <i class="bi bi-credit-card me-2"></i>
             Transactions
           </h5>
-          <button 
-            class="btn btn-light btn-sm" 
-            (click)="editForm()" 
+          <button
+            *ngIf="canEdit"
+            class="btn btn-light btn-sm"
+            (click)="editForm()"
             [disabled]="!data || data.length === 0">
             <i class="bi bi-pencil-square me-1"></i>
             {{ isEditing ? 'View Mode' : 'Edit Mode' }}
           </button>
         </div>
         <div class="card-body">
-          <!-- File Upload Section -->
-          <div class="row mb-4">
+          <div class="row mb-4" *ngIf="canEdit">
             <div class="col-md-6">
-  <div class="upload-panel">
-    <h6 class="section-title mb-3">
-      <i class="bi bi-file-earmark-text me-2"></i>
-      Upload CSV File
-    </h6>
-    <div class="mb-3">
-      <label for="fileInput" class="form-label">Select CSV File (.csv)</label>
-      <input
-        type="file"
-        class="form-control"
-        id="fileInput"
-        accept=".csv"
-        (change)="onFileChange($event)">
-    </div>
-    <button
-      class="btn btn-info"
-      (click)="submit()"
-      [disabled]="!file || isLoading">
-      <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-      <i class="bi bi-file-earmark-arrow-up me-2"></i>
-      {{ isLoading ? 'Processing...' : 'Upload & Process' }}
-    </button>
-  </div>
-</div>
+              <div class="upload-panel">
+                <h6 class="section-title mb-3">
+                  <i class="bi bi-file-earmark-text me-2"></i>
+                  Upload CSV File
+                </h6>
+                <div class="mb-3">
+                  <label for="fileInput" class="form-label">Select CSV File (.csv)</label>
+                  <input
+                    type="file"
+                    class="form-control"
+                    id="fileInput"
+                    accept=".csv"
+                    (change)="onFileChange($event)">
+                </div>
+                <button
+                  class="btn btn-info"
+                  (click)="submit()"
+                  [disabled]="!file || isLoading">
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                  <i class="bi bi-file-earmark-arrow-up me-2"></i>
+                  {{ isLoading ? 'Processing...' : 'Upload & Process' }}
+                </button>
+              </div>
+            </div>
             <div class="col-md-6">
-              <!-- Messages Section -->
               <div class="alert alert-danger" *ngIf="errorMessage">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ errorMessage }}
@@ -57,31 +55,34 @@
             </div>
           </div>
 
-          <!-- Data Display/Edit Section -->
+          <div *ngIf="!canEdit" class="alert alert-info">
+            You have read-only access to transactions.
+          </div>
+
           <div *ngIf="data && data.length > 0">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h6 class="mb-0">
                 <i class="bi bi-table me-2"></i>
                 Transaction Data {{ isEditing ? '(Edit Mode)' : '(View Mode)' }}
               </h6>
-              <div>
-                <button 
-                  *ngIf="isEditing" 
-                  class="btn btn-success btn-sm me-2" 
+              <div *ngIf="canEdit">
+                <button
+                  *ngIf="isEditing"
+                  class="btn btn-success btn-sm me-2"
                   (click)="addNewTransaction()">
                   <i class="bi bi-plus-circle me-1"></i>
                   Add Transaction
                 </button>
-                <button 
-                  *ngIf="isEditing" 
-                  class="btn btn-secondary btn-sm me-2" 
+                <button
+                  *ngIf="isEditing"
+                  class="btn btn-secondary btn-sm me-2"
                   (click)="cancelEdit()">
                   <i class="bi bi-x-circle me-1"></i>
                   Cancel
                 </button>
-                <button 
-                  class="btn btn-primary btn-sm" 
-                  (click)="saveData()" 
+                <button
+                  class="btn btn-primary btn-sm"
+                  (click)="saveData()"
                   [disabled]="isLoading">
                   <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                   <i class="bi bi-save me-1"></i>
@@ -90,7 +91,6 @@
               </div>
             </div>
 
-            <!-- Data Table -->
             <div class="table-responsive">
               <table class="table table-bordered table-hover">
                 <thead class="table-light">
@@ -104,12 +104,11 @@
                     <th class="text-end">Credit Amt</th>
                     <th>Txn Breakup</th>
                     <th>Txn Status</th>
-                    <th *ngIf="isEditing">Actions</th>
+                    <th *ngIf="isEditing && canEdit">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- View Mode -->
-                  <ng-container *ngIf="!isEditing">
+                  <ng-container *ngIf="!isEditing || !canEdit">
                     <tr *ngFor="let transaction of data">
                       <td>{{ transaction.transactionDate | date:'dd/MM/yyyy HH:mm' }}</td>
                       <td>
@@ -145,25 +144,24 @@
                     </tr>
                   </ng-container>
 
-                  <!-- Edit Mode -->
-                  <ng-container *ngIf="isEditing">
+                  <ng-container *ngIf="isEditing && canEdit">
                     <tr *ngFor="let transaction of transactionsFormArray.controls; let i = index">
                       <ng-container [formGroup]="getTransactionGroup(i)">
                         <td>
-                          <input 
-                            type="datetime-local" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="datetime-local"
+                            class="form-control form-control-sm"
                             formControlName="transactionDate">
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="activity">
                         </td>
                         <td>
-                          <select 
-                            class="form-select form-select-sm" 
+                          <select
+                            class="form-select form-select-sm"
                             formControlName="instrument">
                             <option value="">Select</option>
                             <option value="CREDITCARD">Credit Card</option>
@@ -176,40 +174,40 @@
                           </select>
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="txnId">
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="comment">
                         </td>
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm text-end" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm text-end"
                             step="0.01"
                             formControlName="debtAmt">
                         </td>
                         <td>
-                          <input 
-                            type="number" 
-                            class="form-control form-control-sm text-end" 
+                          <input
+                            type="number"
+                            class="form-control form-control-sm text-end"
                             step="0.01"
                             formControlName="creditAmt">
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
+                          <input
+                            type="text"
+                            class="form-control form-control-sm"
                             formControlName="transactionBreakup">
                         </td>
                         <td>
-                          <select 
-                            class="form-select form-select-sm" 
+                          <select
+                            class="form-select form-select-sm"
                             formControlName="transactionStatus">
                             <option value="">Select</option>
                             <option value="SUCCESS">Success</option>
@@ -219,8 +217,8 @@
                           </select>
                         </td>
                         <td>
-                          <button 
-                            class="btn btn-danger btn-sm" 
+                          <button
+                            class="btn btn-danger btn-sm"
                             (click)="removeTransaction(i)"
                             [disabled]="transactionsFormArray.length <= 1">
                             <i class="bi bi-trash"></i>
@@ -234,7 +232,6 @@
             </div>
           </div>
 
-          <!-- Empty State -->
           <div *ngIf="!data || data.length === 0" class="text-center py-5">
             <i class="bi bi-credit-card display-1 text-muted"></i>
             <h5 class="text-muted mt-3">No Transaction Data Available</h5>
@@ -245,6 +242,3 @@
     </div>
   </div>
 </div>
-
-
-

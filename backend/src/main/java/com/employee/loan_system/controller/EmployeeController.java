@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,32 +19,38 @@ public class EmployeeController {
     @Autowired
     private EmployeeService employeeService;
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/getAll")
     public ResponseEntity<List<EmployeeDTO>> getAllEmployees() {
         return new ResponseEntity<>(employeeService.getAllEmployees(), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PostMapping("/saveEmp")
     public ResponseEntity<EmployeeDTO> saveEmployee(@RequestBody EmployeeDTO dto) {
         return new ResponseEntity<>(employeeService.saveEmployee(dto), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @PutMapping("/updateEmp")
     public ResponseEntity<EmployeeDTO> updateEmployee(@RequestBody EmployeeDTO dto) {
         return new ResponseEntity<>(employeeService.updateEmployee(dto), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     @DeleteMapping("/deleteEmp/{id}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/getByEmpId/{id}")
     public ResponseEntity<EmployeeDTO> getEmployeeById(@PathVariable Long id) {
         return new ResponseEntity<>(employeeService.getEmployeeById(id), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/search/{searchTerm}")
     public ResponseEntity<List<EmployeeDTO>> searchEmployees(@PathVariable String searchTerm) {
         if (searchTerm == null || searchTerm.trim().isEmpty() ||
@@ -53,6 +60,7 @@ public class EmployeeController {
         return new ResponseEntity<>(employeeService.searchEmployees(searchTerm.trim()), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/dataSorting")
     public ResponseEntity<List<EmployeeDTO>> sortEmployees(
             @RequestParam String property,
@@ -60,6 +68,7 @@ public class EmployeeController {
         return new ResponseEntity<>(employeeService.sortEmployees(property, orderType), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/searchFilters")
     public ResponseEntity<List<EmployeeDTO>> filterEmployees(
             @RequestParam String filterType,
@@ -67,6 +76,7 @@ public class EmployeeController {
         return new ResponseEntity<>(employeeService.filterEmployees(filterType, empCode), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','ANALYST','VIEWER')")
     @GetMapping("/factoryDesign/{type}")
     public ResponseEntity<byte[]> exportEmployees(@PathVariable String type) {
         byte[] data = employeeService.exportEmployees(type);
