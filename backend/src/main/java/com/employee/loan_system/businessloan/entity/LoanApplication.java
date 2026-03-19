@@ -15,6 +15,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -52,6 +54,7 @@ public class LoanApplication {
     private String purpose;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 30)
     private ApplicationStatus status = ApplicationStatus.DRAFT;
 
@@ -81,3 +84,4 @@ public class LoanApplication {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }
+

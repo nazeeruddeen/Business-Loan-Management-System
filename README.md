@@ -1,8 +1,8 @@
 # Business Loan Management System
 
-Business lending backend and dashboard built with Spring Boot, MySQL, JWT security, and Angular.
+Business lending platform built with Spring Boot, MySQL, JWT security, and an Angular dashboard shell. This is the strongest end-to-end backend story in the repo set.
 
-## What this project covers
+## Highlights
 
 - Borrower onboarding with business identity and address capture
 - Loan product management
@@ -23,16 +23,16 @@ Business lending backend and dashboard built with Spring Boot, MySQL, JWT securi
 - Angular 17
 - Docker, Jenkins, Kubernetes
 
-## Structure
+## Project Layout
 
-- `backend/` - Spring Boot service
+- `backend/` - Spring Boot API service
 - `frontend/` - Angular dashboard shell
 - `k8s/` - deployment manifests
 
 ## Ports
 
 - Backend: `8010`
-- Frontend: `4300`
+- Frontend dev-server: `4300`
 
 ## Run Locally
 
@@ -52,9 +52,7 @@ npm install
 npm start
 ```
 
-## Interview story
-
-Use this project as the core backend delivery story:
+## Interview Talking Points
 
 1. Borrower and product setup
 2. Eligibility evaluation

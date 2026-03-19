@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -29,6 +31,7 @@ public class AppUser {
     private String password;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "role", nullable = false, length = 30)
     private UserRole role = UserRole.BORROWER;
 
@@ -46,3 +49,4 @@ public class AppUser {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
+

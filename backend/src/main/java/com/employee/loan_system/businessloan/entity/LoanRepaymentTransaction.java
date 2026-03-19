@@ -14,6 +14,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -50,6 +52,7 @@ public class LoanRepaymentTransaction {
     private BigDecimal appliedInterestAmount;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "payment_mode", nullable = false, length = 30)
     private PaymentMode paymentMode;
 
@@ -66,3 +69,4 @@ public class LoanRepaymentTransaction {
     @Column(name = "recorded_at", nullable = false, updatable = false)
     private LocalDateTime recordedAt;
 }
+

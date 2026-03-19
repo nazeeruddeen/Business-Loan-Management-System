@@ -6,7 +6,7 @@ This workspace is the implementation folder for the resume project:
 
 Starting point:
 
-- Copied from `employee-loan-system` to reuse authentication, CRUD, file-processing, and deployment foundations.
+- Copied from the original loan-management scaffold to reuse authentication, CRUD, file-processing, and deployment foundations.
 
 Planned scope:
 
@@ -22,5 +22,5 @@ Planned scope:
 
 Notes:
 
-- Keep this folder independent from the original `employee-loan-system`.
+- Keep this folder independent from the original scaffold and the other project folders.
 - All project-specific refactoring should happen here.

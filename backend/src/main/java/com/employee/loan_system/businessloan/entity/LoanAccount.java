@@ -18,6 +18,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -71,6 +73,7 @@ public class LoanAccount {
     private LocalDate nextDueDate;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 30)
     private LoanAccountStatus status = LoanAccountStatus.ACTIVE;
 
@@ -100,3 +103,4 @@ public class LoanAccount {
         transactions.add(transaction);
     }
 }
+

@@ -29,6 +29,7 @@ public class BorrowerAddress {
     private Borrower borrower;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "address_type", nullable = false, length = 30)
     private AddressType addressType;
 
@@ -50,3 +51,4 @@ public class BorrowerAddress {
     @Column(name = "country", nullable = false, length = 80)
     private String country;
 }
+

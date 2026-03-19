@@ -12,6 +12,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -37,6 +39,7 @@ public class EligibilityRule {
     private String ruleExpression;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "rule_type", nullable = false, length = 30)
     private EligibilityRuleType ruleType;
 
@@ -60,3 +63,4 @@ public class EligibilityRule {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }
+
