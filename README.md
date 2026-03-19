@@ -1,61 +1,38 @@
 # Business Loan Management System
 
-Business lending platform built with Spring Boot, MySQL, JWT security, and an Angular dashboard shell. This is the strongest end-to-end backend story in the repo set.
+A robust, production-ready monolithic application for managing business loans. This project demonstrates strong foundational skills in end-to-end delivery using Spring Boot, covering the entire lifecycle from borrower onboarding to loan disbursement and servicing.
 
-## Highlights
+## 🎯 Core Interview Story: End-to-End Monolith Delivery
+This project serves as a "Strong Foundation" resume story. It proves the ability to deliver a complete, production-grade Spring Boot application from scratch, handling complex data relationships, security, and operational readiness.
 
-- Borrower onboarding with business identity and address capture
-- Loan product management
-- Eligibility evaluation and rule management
-- Loan application workflow from draft to disbursement
-- Repayment schedule generation and repayment recording
-- Disbursement reporting and CSV export
-- Role-based security, validation, and structured exception handling
+### Key Architectural Decisions & Features
+*   **Caching Strategy (Redis):** Implemented `@Cacheable` and `@CacheEvict` for `LoanProduct` lookups to handle high-volume read traffic (e.g., frontend dropdowns) while ensuring data freshness on updates. Features a 10-minute TTL fallback.
+*   **Scheduled Batch Jobs:** Offloaded overdue installment detection to a nightly `@Scheduled` batch process to prevent read-path latency and maintain transactional integrity over large datasets.
+*   **Observability & Production Readiness:**
+    *   **Actuator:** Exposed health, metrics, and info endpoints for Kubernetes readiness/liveness probes.
+    *   **Structured Logging:** Configured `logstash-logback-encoder` to output pure JSON logs in staging/production, complete with MDC `correlationId` tracking for seamless ELK stack integration.
+*   **API Design & Documentation:** Fully documented RESTful APIs adhering to maturity model level 2, auto-generated using Springdoc OpenAPI (Swagger UI).
+*   **CI/CD Pipeline:** A complete Jenkinsfile defining stages for Build, Test, Docker Image Push (with credential management), and Kubernetes deployment rollouts.
 
-## Stack
+## 🛠 Tech Stack
+*   **Java 17** & **Spring Boot 3.2**
+*   **Spring Data JPA / Hibernate** (MySQL)
+*   **Spring Security & JWT** (Role-based access control)
+*   **Spring Cache & Redis**
+*   **Flyway** (Database migrations)
+*   **Swagger/OpenAPI** (API Documentation)
+*   **Docker & Jenkins**
 
-- Java 17
-- Spring Boot 3
-- Spring Security + JWT
-- Spring Data JPA + Hibernate
-- MySQL
-- Flyway
-- Angular 17
-- Docker, Jenkins, Kubernetes
+## 🚀 Run Locally
 
-## Project Layout
-
-- `backend/` - Spring Boot API service
-- `frontend/` - Angular dashboard shell
-- `k8s/` - deployment manifests
-
-## Ports
-
-- Backend: `8010`
-- Frontend dev-server: `4300`
-
-## Run Locally
-
-Backend:
-
+**Backend:**
 ```bash
 cd backend
 mvn clean test
 mvn spring-boot:run
 ```
+*(Requires a local MySQL instance running on port 3306 and Redis on 6379, or simply relies on application.properties fallbacks)*
 
-Frontend:
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-## Interview Talking Points
-
-1. Borrower and product setup
-2. Eligibility evaluation
-3. Application review and approval
-4. Disbursement and servicing
-5. Reporting and exports
+**Ports:**
+*   API / Swagger UI: `http://localhost:8010/swagger-ui.html`
+*   Actuator Health: `http://localhost:8010/actuator/health`

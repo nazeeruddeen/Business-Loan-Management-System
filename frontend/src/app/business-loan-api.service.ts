@@ -158,96 +158,25 @@ export class BusinessLoanApiService {
     return params;
   }
 
-  private readonly mockBorrowers: BorrowerResponse[] = [
-    {
-      id: 1,
-      legalBusinessName: 'Apex Traders Pvt Ltd',
-      contactPersonName: 'Naveen Rao',
-      businessPan: 'ABCDE1234F',
-      gstin: '29ABCDE1234F1Z5',
-      email: 'accounts@apextraders.example',
-      phoneNumber: '9876543210',
-      industryType: 'Wholesale Trading',
-      annualTurnover: 25000000,
-      monthlyIncome: 1200000,
-      createdAt: new Date().toISOString(),
-      addresses: [
-        { id: 1, addressType: 'REGISTERED', lineOne: '12 Industrial Park', lineTwo: 'Phase 2', city: 'Hyderabad', state: 'Telangana', postalCode: '500081', country: 'India' }
-      ]
-    }
-  ];
+  private readonly mockBorrowers: BorrowerResponse[] = [];
 
-  private readonly mockLoanProducts: LoanProductResponse[] = [
-    {
-      id: 1,
-      productCode: 'BL-TERM-36',
-      name: 'Business Term Loan',
-      minAmount: 500000,
-      maxAmount: 10000000,
-      interestRate: 13.5,
-      tenureMonths: 36,
-      eligibilityCriteria: 'Stable turnover and repayment capacity',
-      active: true,
-      createdAt: new Date().toISOString()
-    }
-  ];
+  private readonly mockLoanProducts: LoanProductResponse[] = [];
 
-  private readonly mockRules: EligibilityRuleResponse[] = [
-    { id: 1, ruleCode: 'INCOME_MIN', ruleExpression: 'Monthly income >= 100000', ruleType: 'MIN_VALUE', minValue: 100000, active: true }
-  ];
+  private readonly mockRules: EligibilityRuleResponse[] = [];
 
-  private readonly mockApplications: LoanApplicationResponse[] = [
-    {
-      id: 101,
-      borrowerId: 1,
-      borrowerName: 'Apex Traders Pvt Ltd',
-      loanProductId: 1,
-      loanProductCode: 'BL-TERM-36',
-      requestedAmount: 2500000,
-      requestedTenureMonths: 36,
-      purpose: 'Working capital expansion',
-      status: 'APPROVED',
-      eligibilityPassed: true,
-      eligibilitySummary: 'Eligible',
-      reviewerUsername: 'reviewer01',
-      submittedAt: new Date().toISOString(),
-      decisionedAt: new Date().toISOString(),
-      disbursedAt: new Date().toISOString(),
-      decisionRemarks: 'Meets policy thresholds',
-      history: []
-    }
-  ];
+  private readonly mockApplications: LoanApplicationResponse[] = [];
 
-  private readonly mockLoanAccounts: LoanAccountResponse[] = [
-    {
-      id: 5001,
-      applicationId: 101,
-      accountNumber: 'BLA-5001',
-      borrowerName: 'Apex Traders Pvt Ltd',
-      productCode: 'BL-TERM-36',
-      principalAmount: 2500000,
-      annualInterestRate: 13.5,
-      tenureMonths: 36,
-      monthlyInstallmentAmount: 84321,
-      outstandingPrincipal: 2140000,
-      disbursementReference: 'DISB-2026-001',
-      status: 'ACTIVE',
-      disbursedAt: new Date().toISOString(),
-      nextDueDate: new Date().toISOString().slice(0, 10),
-      installments: [],
-      transactions: []
-    }
-  ];
+  private readonly mockLoanAccounts: LoanAccountResponse[] = [];
 
   private readonly mockDashboard: BusinessLoanDashboardResponse = {
-    totalLoanApplications: 14,
-    approvedLoanApplications: 9,
-    disbursedLoanAccounts: 6,
-    activeLoanAccounts: 5,
-    overdueInstallments: 2,
-    totalPrincipalDisbursed: 18500000,
-    totalOutstandingPrincipal: 12400000,
-    totalRepaidAmount: 6100000
+    totalLoanApplications: 0,
+    approvedLoanApplications: 0,
+    disbursedLoanAccounts: 0,
+    activeLoanAccounts: 0,
+    overdueInstallments: 0,
+    totalPrincipalDisbursed: 0,
+    totalOutstandingPrincipal: 0,
+    totalRepaidAmount: 0
   };
 
   private readonly mockReport = {
@@ -255,30 +184,16 @@ export class BusinessLoanApiService {
     toDate: undefined,
     page: 0,
     size: 8,
-    totalElements: 1,
-    totalPages: 1,
-    disbursedCount: 1,
-    totalPrincipalDisbursed: 2500000,
-    totalOutstandingPrincipal: 2140000,
-    items: [
-      {
-        accountId: 5001,
-        accountNumber: 'BLA-5001',
-        applicationId: 101,
-        borrowerName: 'Apex Traders Pvt Ltd',
-        productCode: 'BL-TERM-36',
-        principalAmount: 2500000,
-        outstandingPrincipal: 2140000,
-        status: 'ACTIVE',
-        disbursedAt: new Date().toISOString(),
-        nextDueDate: new Date().toISOString().slice(0, 10)
-      }
-    ]
+    totalElements: 0,
+    totalPages: 0,
+    disbursedCount: 0,
+    totalPrincipalDisbursed: 0,
+    totalOutstandingPrincipal: 0,
+    items: []
   } as DisbursementReportResponse;
 
   private readonly mockDisbursementCsv = [
     'accountNumber,applicationId,borrowerName,productCode,principalAmount,outstandingPrincipal,status',
-    'BLA-5001,101,Apex Traders Pvt Ltd,BL-TERM-36,2500000,2140000,ACTIVE'
+    ''
   ].join('\n');
 }
-

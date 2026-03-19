@@ -1,17 +1,39 @@
-<main class="shell">
-  <section class="hero">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar__logo">
+      <div class="logo-icon"></div>
+      <h2>BizLoan</h2>
+    </div>
+    <nav class="sidebar__nav">
+      <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
+      <button [class.active]="activeTab === 'borrowers'" (click)="setTab('borrowers')">Borrowers</button>
+      <button [class.active]="activeTab === 'products'" (click)="setTab('products')">Products</button>
+      <button [class.active]="activeTab === 'applications'" (click)="setTab('applications')">Applications</button>
+      <button [class.active]="activeTab === 'approval'" (click)="setTab('approval')">Approval</button>
+      <button [class.active]="activeTab === 'servicing'" (click)="setTab('servicing')">Servicing</button>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <h1>{{ title }}</h1>
+      <div class="topbar__actions">
+        <span class="api-note">API: <strong>{{ apiBaseUrl }}</strong></span>
+        <button type="button" class="primary ghost" (click)="refreshAll()">Refresh Data</button>
+      </div>
+    </header>
+    
+    <div style="margin-bottom: 24px;" *ngIf="notice.text !== 'Ready' && notice.text">
+      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+    </div>
+
+  <section class="hero animated-panel" *ngIf="activeTab === 'dashboard'">
     <div class="hero__copy">
       <div class="eyebrow">Core lending workflow</div>
-      <h1>{{ title }}</h1>
+      <h2>Welcome back</h2>
       <p>
-        Borrower onboarding, loan products, eligibility, application review, disbursement, servicing, and reporting in one interview-ready dashboard.
+        Borrower onboarding, loan products, eligibility, application review, disbursement, servicing, and reporting in one modular dashboard.
       </p>
-      <div class="hero__actions">
-        <button type="button" class="primary" (click)="refreshAll()">Refresh data</button>
-        <button type="button" class="ghost" (click)="exportCsv()">Export disbursement CSV</button>
-      </div>
-      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
-      <div class="api-note">API base URL: <strong>{{ apiBaseUrl }}</strong></div>
     </div>
 
     <div class="hero__metrics">
@@ -34,8 +56,8 @@
     </div>
   </section>
 
-  <section class="grid">
-    <article class="panel">
+  <section class="view-container">
+    <article class="panel animated-panel" *ngIf="activeTab === 'borrowers'">
       <header class="panel__header">
         <h2>Borrower onboarding</h2>
         <button type="button" class="ghost" (click)="searchBorrowers()">Search borrowers</button>
@@ -45,11 +67,11 @@
         <div class="row">
           <label>
             PAN
-            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F">
+            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F" maxlength="10">
           </label>
           <label>
             Business name
-            <input type="text" formControlName="businessName" placeholder="Apex Traders Pvt Ltd">
+            <input type="text" formControlName="businessName" placeholder="Business name">
           </label>
         </div>
       </form>
@@ -58,21 +80,21 @@
         <div class="row">
           <label>
             Legal business name
-            <input type="text" formControlName="legalBusinessName" placeholder="Apex Traders Pvt Ltd">
+            <input type="text" formControlName="legalBusinessName" placeholder="Legal business name">
           </label>
           <label>
             Contact person
-            <input type="text" formControlName="contactPersonName" placeholder="Naveen Rao">
+            <input type="text" formControlName="contactPersonName" placeholder="Contact person name">
           </label>
         </div>
         <div class="row">
           <label>
             PAN
-            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F">
+            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F" maxlength="10">
           </label>
           <label>
             GSTIN
-            <input type="text" formControlName="gstin" placeholder="29ABCDE1234F1Z5">
+            <input type="text" formControlName="gstin" placeholder="29ABCDE1234F1Z5" maxlength="15">
           </label>
         </div>
         <div class="row">
@@ -88,17 +110,17 @@
         <div class="row">
           <label>
             Industry type
-            <input type="text" formControlName="industryType" placeholder="Wholesale Trading">
+            <input type="text" formControlName="industryType" placeholder="Industry type">
           </label>
           <label>
             Annual turnover
-            <input type="number" formControlName="annualTurnover" placeholder="25000000">
+            <input type="number" formControlName="annualTurnover" min="1" step="1" placeholder="25000000">
           </label>
         </div>
         <div class="row">
           <label>
             Monthly income
-            <input type="number" formControlName="monthlyIncome" placeholder="1200000">
+            <input type="number" formControlName="monthlyIncome" min="1" step="1" placeholder="1200000">
           </label>
           <div class="spacer"></div>
         </div>
@@ -139,7 +161,7 @@
               </label>
               <label>
                 Postal code
-                <input type="text" formControlName="postalCode">
+                <input type="text" formControlName="postalCode" maxlength="10">
               </label>
             </div>
             <div class="row">
@@ -166,7 +188,7 @@
       </div>
     </article>
 
-    <article class="panel">
+    <article class="panel animated-panel" *ngIf="activeTab === 'products'">
       <header class="panel__header">
         <h2>Loan products and rules</h2>
         <button type="button" class="ghost" (click)="searchProducts()">Search products</button>
@@ -190,11 +212,11 @@
         <div class="row">
           <label>
             Amount
-            <input type="number" formControlName="amount" placeholder="2500000">
+            <input type="number" formControlName="amount" min="1" step="1" placeholder="2500000">
           </label>
           <label>
             Max tenure months
-            <input type="number" formControlName="maxTenureMonths" placeholder="36">
+            <input type="number" formControlName="maxTenureMonths" min="1" step="1" placeholder="36">
           </label>
         </div>
       </form>
@@ -213,21 +235,21 @@
         <div class="row">
           <label>
             Min amount
-            <input type="number" formControlName="minAmount">
+            <input type="number" formControlName="minAmount" min="1" step="1">
           </label>
           <label>
             Max amount
-            <input type="number" formControlName="maxAmount">
+            <input type="number" formControlName="maxAmount" min="1" step="1">
           </label>
         </div>
         <div class="row">
           <label>
             Interest rate
-            <input type="number" formControlName="interestRate" step="0.1">
+            <input type="number" formControlName="interestRate" min="0.1" step="0.1">
           </label>
           <label>
             Tenure months
-            <input type="number" formControlName="tenureMonths">
+            <input type="number" formControlName="tenureMonths" min="1" step="1">
           </label>
         </div>
         <div class="row">
@@ -298,7 +320,7 @@
       </div>
     </article>
 
-    <article class="panel">
+    <article class="panel animated-panel" *ngIf="activeTab === 'applications'">
       <header class="panel__header">
         <h2>Eligibility and application workflow</h2>
         <button type="button" class="ghost" (click)="searchApplications()">Search applications</button>
@@ -308,21 +330,21 @@
         <div class="row">
           <label>
             Borrower ID
-            <input type="number" formControlName="borrowerId">
+            <input type="number" formControlName="borrowerId" min="1" step="1">
           </label>
           <label>
             Product ID
-            <input type="number" formControlName="loanProductId">
+            <input type="number" formControlName="loanProductId" min="1" step="1">
           </label>
         </div>
         <div class="row">
           <label>
             Requested amount
-            <input type="number" formControlName="requestedAmount">
+            <input type="number" formControlName="requestedAmount" min="1" step="1">
           </label>
           <label>
             Requested tenure
-            <input type="number" formControlName="requestedTenureMonths">
+            <input type="number" formControlName="requestedTenureMonths" min="1" step="1">
           </label>
         </div>
         <button type="button" class="primary" (click)="evaluateEligibility()">Evaluate eligibility</button>
@@ -346,21 +368,21 @@
         <div class="row">
           <label>
             Borrower ID
-            <input type="number" formControlName="borrowerId">
+            <input type="number" formControlName="borrowerId" min="1" step="1">
           </label>
           <label>
             Product ID
-            <input type="number" formControlName="loanProductId">
+            <input type="number" formControlName="loanProductId" min="1" step="1">
           </label>
         </div>
         <div class="row">
           <label>
             Requested amount
-            <input type="number" formControlName="requestedAmount">
+            <input type="number" formControlName="requestedAmount" min="1" step="1">
           </label>
           <label>
             Requested tenure
-            <input type="number" formControlName="requestedTenureMonths">
+            <input type="number" formControlName="requestedTenureMonths" min="1" step="1">
           </label>
         </div>
         <div class="row">
@@ -381,7 +403,7 @@
       </div>
     </article>
 
-    <article class="panel">
+    <article class="panel animated-panel" *ngIf="activeTab === 'approval'">
       <header class="panel__header">
         <h2>Approval and disbursement</h2>
         <div class="chip" *ngIf="selectedApplication">Selected #{{ selectedApplication.id }}</div>
@@ -437,7 +459,7 @@
       </form>
     </article>
 
-    <article class="panel">
+    <article class="panel animated-panel" *ngIf="activeTab === 'servicing'">
       <header class="panel__header">
         <h2>Loan servicing and reports</h2>
         <div class="chip" *ngIf="selectedAccount">Account {{ selectedAccount.accountNumber }}</div>
@@ -499,7 +521,7 @@
           <div class="row">
             <label>
               Page size
-              <input type="number" formControlName="size">
+              <input type="number" formControlName="size" min="1" step="1">
             </label>
             <div class="inline-actions">
               <button type="button" class="ghost" (click)="loadReport()">Load report</button>
@@ -534,5 +556,7 @@
       </div>
     </article>
   </section>
-</main>
+  </main>
+</div>
+
 

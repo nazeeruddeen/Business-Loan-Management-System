@@ -7,6 +7,8 @@ import com.employee.loan_system.businessloan.repository.LoanProductRepository;
 import com.employee.loan_system.exception.DuplicateResourceException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class LoanProductService {
 
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
+    @CacheEvict(value = "loanProducts", allEntries = true)
     public LoanProductResponse createProduct(CreateLoanProductRequest request) {
         if (request.getMinAmount().compareTo(request.getMaxAmount()) > 0) {
             throw new IllegalArgumentException("Minimum amount cannot be greater than maximum amount");
@@ -57,8 +60,14 @@ public class LoanProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Loan product not found with id: " + productId)));
     }
 
+    /**
+     * Cache key includes all filter params. TTL-based expiry configured in Redis (10 min).
+     * Interview answer: "We cache product listings since loan products are configured infrequently
+     * but read on every application creation. Cache is evicted on any write to prevent stale data."
+     */
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER','BORROWER')")
+    @Cacheable(value = "loanProducts", unless = "#result.isEmpty()")
     public List<LoanProductResponse> searchProducts(String name, Boolean active, BigDecimal amount, Integer maxTenureMonths) {
         Specification<LoanProduct> specification = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();

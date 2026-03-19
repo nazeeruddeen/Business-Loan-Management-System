@@ -4,6 +4,7 @@ import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, Validator
 import { BusinessLoanApiService } from './business-loan-api.service';
 import {
   ApplicationDecisionRequest,
+  AssignReviewerRequest,
   ApplicationStatus,
   BorrowerAddressRequest,
   BorrowerResponse,
@@ -35,7 +36,7 @@ type NoticeKind = 'info' | 'success' | 'warning' | 'danger';
 })
 export class AppComponent implements OnInit {
   readonly title = 'Business Loan Management System';
-  readonly apiBaseUrl = 'http://localhost:8080/api/v1';
+  readonly apiBaseUrl = 'http://localhost:8010/api/v1';
   readonly addressTypes: BorrowerAddressRequest['addressType'][] = ['REGISTERED', 'OPERATIONAL', 'CORRESPONDENCE'];
   readonly paymentModes: PaymentMode[] = ['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CARD', 'BANK_TRANSFER'];
   readonly applicationStatuses: ApplicationStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'DISBURSED'];
@@ -64,12 +65,18 @@ export class AppComponent implements OnInit {
   selectedAccount: LoanAccountResponse | null = null;
   reportPage = 0;
 
-  borrowerSearchForm = this.fb.group({
+  activeTab: string = 'dashboard';
+
+  setTab(tab: string): void {
+    this.activeTab = tab;
+  }
+
+  borrowerSearchForm = this.fb.group<any>({
     businessPan: [''],
     businessName: ['']
   });
 
-  borrowerForm = this.fb.group({
+  borrowerForm = this.fb.group<any>({
     legalBusinessName: ['', [Validators.required, Validators.maxLength(150)]],
     contactPersonName: ['', [Validators.required, Validators.maxLength(120)]],
     businessPan: ['', [Validators.required, Validators.pattern(/^[A-Z]{5}[0-9]{4}[A-Z]$/)]],
@@ -82,14 +89,14 @@ export class AppComponent implements OnInit {
     addresses: this.fb.array([this.createAddressGroup('REGISTERED')])
   });
 
-  loanProductSearchForm = this.fb.group({
+  loanProductSearchForm = this.fb.group<any>({
     name: [''],
     active: [''],
     amount: [''],
     maxTenureMonths: ['']
   });
 
-  loanProductForm = this.fb.group({
+  loanProductForm = this.fb.group<any>({
     productCode: ['', [Validators.required, Validators.maxLength(40)]],
     name: ['', [Validators.required, Validators.maxLength(120)]],
     minAmount: [null, [Validators.required, Validators.min(1)]],
@@ -100,11 +107,11 @@ export class AppComponent implements OnInit {
     active: [true]
   });
 
-  applicationSearchForm = this.fb.group({
+  applicationSearchForm = this.fb.group<any>({
     status: ['']
   });
 
-  applicationForm = this.fb.group({
+  applicationForm = this.fb.group<any>({
     borrowerId: [null, [Validators.required]],
     loanProductId: [null, [Validators.required]],
     requestedAmount: [null, [Validators.required, Validators.min(1)]],
@@ -112,28 +119,28 @@ export class AppComponent implements OnInit {
     purpose: ['', [Validators.required, Validators.maxLength(200)]]
   });
 
-  reviewerForm = this.fb.group({
-    reviewerUsername: ['reviewer01', [Validators.required]]
+  reviewerForm = this.fb.group<any>({
+    reviewerUsername: ['', [Validators.required]]
   });
 
-  decisionForm = this.fb.group({
+  decisionForm = this.fb.group<any>({
     approved: [true],
-    remarks: ['Approved after policy review']
+    remarks: ['']
   });
 
-  disbursementForm = this.fb.group({
-    disbursementReference: ['DISB-2026-001', [Validators.required]],
+  disbursementForm = this.fb.group<any>({
+    disbursementReference: ['', [Validators.required]],
     disbursementDate: [this.today(), [Validators.required]]
   });
 
-  eligibilityForm = this.fb.group({
+  eligibilityForm = this.fb.group<any>({
     borrowerId: [null, [Validators.required]],
     loanProductId: [null, [Validators.required]],
     requestedAmount: [null, [Validators.required, Validators.min(1)]],
     requestedTenureMonths: [36, [Validators.required, Validators.min(1)]]
   });
 
-  ruleForm = this.fb.group({
+  ruleForm = this.fb.group<any>({
     ruleCode: ['INCOME_MIN', [Validators.required, Validators.maxLength(40)]],
     ruleExpression: ['Monthly income should meet policy threshold', [Validators.required, Validators.maxLength(250)]],
     ruleType: ['MIN_VALUE', [Validators.required]],
@@ -143,7 +150,7 @@ export class AppComponent implements OnInit {
     active: [true]
   });
 
-  repaymentForm = this.fb.group({
+  repaymentForm = this.fb.group<any>({
     amount: [null, [Validators.required, Validators.min(1)]],
     paymentMode: ['UPI', [Validators.required]],
     transactionReference: ['TXN-001', [Validators.required]],
@@ -151,7 +158,7 @@ export class AppComponent implements OnInit {
     notes: ['']
   });
 
-  reportForm = this.fb.group({
+  reportForm = this.fb.group<any>({
     from: [''],
     to: [''],
     size: [8]
@@ -210,7 +217,7 @@ export class AppComponent implements OnInit {
       this.warn('Borrower form has validation errors');
       return;
     }
-    const payload = this.borrowerForm.getRawValue() as CreateBorrowerRequest;
+    const payload = this.borrowerForm.getRawValue() as unknown as CreateBorrowerRequest;
     this.api.createBorrower(payload).subscribe({
       next: (borrower) => {
         this.borrowers = [borrower, ...this.borrowers];
@@ -229,7 +236,7 @@ export class AppComponent implements OnInit {
       this.warn('Loan product form has validation errors');
       return;
     }
-    const payload = this.loanProductForm.getRawValue() as CreateLoanProductRequest;
+    const payload = this.loanProductForm.getRawValue() as unknown as CreateLoanProductRequest;
     this.api.createLoanProduct(payload).subscribe({
       next: (product) => {
         this.loanProducts = [product, ...this.loanProducts];
@@ -245,7 +252,7 @@ export class AppComponent implements OnInit {
       this.warn('Loan application form has validation errors');
       return;
     }
-    const payload = this.applicationForm.getRawValue() as CreateLoanApplicationRequest;
+    const payload = this.applicationForm.getRawValue() as unknown as CreateLoanApplicationRequest;
     this.api.createLoanApplication(payload).subscribe({
       next: (application) => {
         this.applications = [application, ...this.applications];
@@ -272,7 +279,8 @@ export class AppComponent implements OnInit {
       this.warn('Select an application first');
       return;
     }
-    this.api.assignReviewer(this.selectedApplication.id, this.reviewerForm.getRawValue()).subscribe({
+    const payload = this.reviewerForm.getRawValue() as unknown as AssignReviewerRequest;
+    this.api.assignReviewer(this.selectedApplication.id, payload).subscribe({
       next: (application) => this.replaceApplication(application),
       error: () => this.warn('Unable to assign reviewer')
     });
@@ -283,7 +291,7 @@ export class AppComponent implements OnInit {
       this.warn('Select an application first');
       return;
     }
-    const payload = this.decisionForm.getRawValue() as ApplicationDecisionRequest;
+    const payload = this.decisionForm.getRawValue() as unknown as ApplicationDecisionRequest;
     this.api.decideApplication(this.selectedApplication.id, payload).subscribe({
       next: (application) => this.replaceApplication(application),
       error: () => this.warn('Unable to save decision')
@@ -295,8 +303,8 @@ export class AppComponent implements OnInit {
       this.warn('Select an application first');
       return;
     }
-    const payload = this.disbursementForm.getRawValue();
-    this.api.disburseApplication(this.selectedApplication.id, payload as DisburseLoanRequest).subscribe({
+    const payload = this.disbursementForm.getRawValue() as unknown as DisburseLoanRequest;
+    this.api.disburseApplication(this.selectedApplication.id, payload).subscribe({
       next: (application) => {
         this.replaceApplication(application);
         this.notice = { kind: 'success', text: `Application ${application.id} disbursed` };
@@ -313,7 +321,7 @@ export class AppComponent implements OnInit {
       this.warn('Eligibility form has validation errors');
       return;
     }
-    this.api.evaluateEligibility(this.eligibilityForm.getRawValue() as EvaluateEligibilityRequest).subscribe((result) => {
+    this.api.evaluateEligibility(this.eligibilityForm.getRawValue() as unknown as EvaluateEligibilityRequest).subscribe((result) => {
       this.eligibility = result;
       this.notice = result.eligible
         ? { kind: 'success', text: result.summary }
@@ -327,7 +335,7 @@ export class AppComponent implements OnInit {
       this.warn('Rule form has validation errors');
       return;
     }
-    const payload = this.ruleForm.getRawValue() as CreateEligibilityRuleRequest;
+    const payload = this.ruleForm.getRawValue() as unknown as CreateEligibilityRuleRequest;
     this.api.createEligibilityRule(payload).subscribe({
       next: (rule) => {
         this.rules = [rule, ...this.rules];
@@ -347,7 +355,8 @@ export class AppComponent implements OnInit {
       this.warn('Repayment form has validation errors');
       return;
     }
-    this.api.recordRepayment(this.selectedAccount.id, this.repaymentForm.getRawValue() as RecordRepaymentRequest).subscribe({
+    const payload = this.repaymentForm.getRawValue() as unknown as RecordRepaymentRequest;
+    this.api.recordRepayment(this.selectedAccount.id, payload).subscribe({
       next: (account) => {
         this.selectAccount(account);
         this.accounts = this.accounts.map((item) => (item.id === account.id ? account : item));
@@ -358,14 +367,14 @@ export class AppComponent implements OnInit {
   }
 
   loadReport(): void {
-    const filters = this.reportForm.getRawValue();
-    this.api.report({ from: filters.from || undefined, to: filters.to || undefined }, this.reportPage, filters.size ?? 8)
+    const filters = this.reportForm.getRawValue() as Record<string, any>;
+    this.api.report({ from: filters['from'] || undefined, to: filters['to'] || undefined }, this.reportPage, filters['size'] ?? 8)
       .subscribe((report) => (this.report = report));
   }
 
   exportCsv(): void {
-    const filters = this.reportForm.getRawValue();
-    this.api.exportDisbursements({ from: filters.from || undefined, to: filters.to || undefined }).subscribe((csv) => {
+    const filters = this.reportForm.getRawValue() as Record<string, any>;
+    this.api.exportDisbursements({ from: filters['from'] || undefined, to: filters['to'] || undefined }).subscribe((csv) => {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -377,7 +386,7 @@ export class AppComponent implements OnInit {
   }
 
   searchBorrowers(): void {
-    this.api.borrowers(this.borrowerSearchForm.getRawValue()).subscribe((items) => {
+    this.api.borrowers(this.borrowerSearchForm.getRawValue() as unknown as { businessPan?: string; businessName?: string }).subscribe((items) => {
       this.borrowers = items;
       this.notice = { kind: 'info', text: `Loaded ${items.length} borrower record(s)` };
     });
@@ -448,19 +457,19 @@ export class AppComponent implements OnInit {
   }
 
   private productFilters(): { name?: string; active?: boolean | null; amount?: number; maxTenureMonths?: number } {
-    const value = this.loanProductSearchForm.getRawValue();
+    const value = this.loanProductSearchForm.getRawValue() as Record<string, any>;
     return {
-      name: value.name || undefined,
-      active: value.active === '' ? null : value.active === 'true' ? true : value.active === 'false' ? false : null,
-      amount: value.amount ? Number(value.amount) : undefined,
-      maxTenureMonths: value.maxTenureMonths ? Number(value.maxTenureMonths) : undefined
+      name: value['name'] || undefined,
+      active: value['active'] === '' ? null : value['active'] === 'true' ? true : value['active'] === 'false' ? false : null,
+      amount: value['amount'] ? Number(value['amount']) : undefined,
+      maxTenureMonths: value['maxTenureMonths'] ? Number(value['maxTenureMonths']) : undefined
     };
   }
 
   private applicationFilters(): { status?: string | null } {
-    const value = this.applicationSearchForm.getRawValue();
+    const value = this.applicationSearchForm.getRawValue() as Record<string, any>;
     return {
-      status: value.status || undefined
+      status: value['status'] || undefined
     };
   }
 
@@ -471,7 +480,7 @@ export class AppComponent implements OnInit {
   }
 
   private createAddressGroup(addressType: BorrowerAddressRequest['addressType'] = 'REGISTERED') {
-    return this.fb.group({
+    return this.fb.group<any>({
       addressType: [addressType, Validators.required],
       lineOne: ['', [Validators.required, Validators.maxLength(160)]],
       lineTwo: [''],

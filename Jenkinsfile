@@ -3,17 +3,28 @@ pipeline {
 
     options {
         timestamps()
+        timeout(time: 30, unit: 'MINUTES')
     }
 
     environment {
-        APP_NAME = 'business-loan-management-system'
-        IMAGE_TAG = 'latest'
+        APP_NAME            = 'business-loan-management-system'
+        IMAGE_TAG           = "${env.BUILD_NUMBER ?: 'latest'}"
+        DOCKER_REGISTRY_URL = "${env.DOCKER_REGISTRY_URL ?: ''}"
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                echo "Building branch: ${env.BRANCH_NAME ?: 'unknown'}, commit: ${env.GIT_COMMIT ?: 'unknown'}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('backend') {
+                    sh 'mvn -B -DskipTests package'
+                }
             }
         }
 
@@ -23,19 +34,17 @@ pipeline {
                     sh 'mvn -B test'
                 }
             }
-        }
-
-        stage('Package') {
-            steps {
-                dir('backend') {
-                    sh 'mvn -B -DskipTests package'
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: 'backend/target/surefire-reports/*.xml'
                 }
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t business-loan-management-system:latest -f backend/Dockerfile backend'
+                sh "docker build -t ${APP_NAME}:${IMAGE_TAG} -f backend/Dockerfile backend"
+                sh "docker tag ${APP_NAME}:${IMAGE_TAG} ${APP_NAME}:latest"
             }
         }
 
@@ -44,7 +53,14 @@ pipeline {
                 expression { return env.DOCKER_REGISTRY_URL?.trim() }
             }
             steps {
-                sh 'echo "Push to registry is configured via Jenkins credentials in the target environment."'
+                withCredentials([usernamePassword(
+                        credentialsId: 'docker-registry-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS')]) {
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin ${DOCKER_REGISTRY_URL}"
+                    sh "docker tag ${APP_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY_URL}/${APP_NAME}:${IMAGE_TAG}"
+                    sh "docker push ${DOCKER_REGISTRY_URL}/${APP_NAME}:${IMAGE_TAG}"
+                }
             }
         }
 
@@ -54,7 +70,17 @@ pipeline {
             }
             steps {
                 sh 'kubectl apply -f k8s/'
+                sh "kubectl rollout status deployment/${APP_NAME} --timeout=120s"
             }
+        }
+    }
+
+    post {
+        failure {
+            echo "Pipeline failed! Check logs for details."
+        }
+        success {
+            echo "Deploy of ${APP_NAME}:${IMAGE_TAG} succeeded."
         }
     }
 }
