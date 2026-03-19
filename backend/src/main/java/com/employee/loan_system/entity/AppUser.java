@@ -30,7 +30,7 @@ public class AppUser {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 30)
-    private UserRole role = UserRole.VIEWER;
+    private UserRole role = UserRole.BORROWER;
 
     @Column(name = "active", nullable = false)
     private boolean active = true;

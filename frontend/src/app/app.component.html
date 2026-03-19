@@ -1,159 +1,538 @@
-<!-- <mat-drawer-container>
-  <mat-drawer mode="side" opened class="sidenav"> 
-    <ul class="nav navbar-nav">
-      <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}"><a [routerLink]="''" (click)="back()">Employee</a></li>
-      <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}"><a [routerLink]="'/loan'" (click)="showloanData()">Loan</a></li>
-  </ul>
-  </mat-drawer>
-   <mat-drawer-content *ngIf="!id">
-    <router-outlet></router-outlet> -->
-    <!--
-    <button *ngIf="!showTaskboard &&  !showFilterData && !showLoanboard" mat-raised-button color="primary" (click)="openDialog()" class="btn-add-employee">Add Employee</button> 
-    <a *ngIf="!showTaskboard &&  !showFilterData && !showLoanboard " [routerLink]="'taskboard'" (click)="showTaskboardData()" class="link-taskboard">Taskboard</a>
-    <a *ngIf="!showFilterData && !showTaskboard && !showLoanboard" [routerLink]="'filterdata'" (click)="showFilterdataScreen()" class="link-taskboard">filterData</a>
-    <a *ngIf="showTaskboard || showFilterData " [routerLink]="''" (click)="back()">Back</a>
-    <table  width="100%" *ngIf="!showTaskboard && !showFilterData && !showLoanboard" mat-table [dataSource]="employeeData" class="mat-elevation-z8 table-wrapper" matSort>
-      
-    
-      <ng-container matColumnDef="id">
-        <th mat-header-cell *matHeaderCellDef> <span class="thead-title">SN</span>
-        <span (click)="sortData('id', 'ASC')" class="uparrow"></span>
-        <span (click)="sortData('id', 'DESC')" class="downarrow"></span> 
-        </th>
-        <td mat-cell *matCellDef="let element"> {{element.id}} </td>
-      </ng-container>
-      
-      
-        <ng-container matColumnDef="fname">
-          <th  mat-header-cell *matHeaderCellDef> 
-            <span class="thead-title">Emp code</span>
-            <span (click)="sortData('fname', 'ASC')" class="uparrow"></span>
-            <span (click)="sortData('fname', 'DESC')" class="downarrow"></span>
-          </th>
-          <td mat-cell *matCellDef="let element"> {{element.fname}} </td>
-        </ng-container>
+<main class="shell">
+  <section class="hero">
+    <div class="hero__copy">
+      <div class="eyebrow">Core lending workflow</div>
+      <h1>{{ title }}</h1>
+      <p>
+        Borrower onboarding, loan products, eligibility, application review, disbursement, servicing, and reporting in one interview-ready dashboard.
+      </p>
+      <div class="hero__actions">
+        <button type="button" class="primary" (click)="refreshAll()">Refresh data</button>
+        <button type="button" class="ghost" (click)="exportCsv()">Export disbursement CSV</button>
+      </div>
+      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+      <div class="api-note">API base URL: <strong>{{ apiBaseUrl }}</strong></div>
+    </div>
 
-        <ng-container matColumnDef="fullname"> 
-          
-            <th mat-header-cell *matHeaderCellDef (click)="sortData('fullname','DESC')"> 
-            <span class="thead-title">fullname </span>
-            <span (click)="sortData('fullname', 'ASC')" class="uparrow"></span>
-            <span (click)="sortData('fullname', 'DESC')" class="downarrow"></span>
-          </th>
-          <td mat-cell *matCellDef="let element" mat-sort-header class="sort-arrow"> 
-            {{element.fullname}}
-          </td>
-        </ng-container>
+    <div class="hero__metrics">
+      <article class="metric">
+        <span>Total applications</span>
+        <strong>{{ summary.totalLoanApplications }}</strong>
+      </article>
+      <article class="metric">
+        <span>Approved</span>
+        <strong>{{ summary.approvedLoanApplications }}</strong>
+      </article>
+      <article class="metric">
+        <span>Active accounts</span>
+        <strong>{{ summary.activeLoanAccounts }}</strong>
+      </article>
+      <article class="metric">
+        <span>Overdue installments</span>
+        <strong>{{ summary.overdueInstallments }}</strong>
+      </article>
+    </div>
+  </section>
 
-        <ng-container matColumnDef="lname">
-          <th mat-header-cell *matHeaderCellDef> 
-            <span class="thead-title">LastName</span> 
-            <span (click)="sortData('lname', 'ASC')" class="uparrow"></span>
-            <span (click)="sortData('lname', 'DESC')" class="downarrow"></span>
-          </th>
-          <td mat-cell *matCellDef="let element"> {{element.lname}} </td>
-        </ng-container>
+  <section class="grid">
+    <article class="panel">
+      <header class="panel__header">
+        <h2>Borrower onboarding</h2>
+        <button type="button" class="ghost" (click)="searchBorrowers()">Search borrowers</button>
+      </header>
 
-      <ng-container matColumnDef="dept">
-        <th mat-header-cell *matHeaderCellDef> 
-            <span class="thead-title">dept</span>
-            <span (click)="sortData('dept', 'ASC')" class="uparrow"></span>
-            <span (click)="sortData('dept', 'DESC')" class="downarrow"></span>
-        </th>
-        <td mat-cell *matCellDef="let element"> {{element.dept}} </td>
-      </ng-container>
-    
-      
-      <ng-container matColumnDef="age">
-          <th mat-header-cell *matHeaderCellDef> 
-            <span class="thead-title">age</span>
-            <span (click)="sortData('age', 'ASC')" class="uparrow"></span>
-            <span (click)="sortData('age', 'DESC')" class="downarrow"></span>
-          </th>
-        <td mat-cell *matCellDef="let element"> {{element.age}} </td>
-      </ng-container>
+      <form class="form" [formGroup]="borrowerSearchForm">
+        <div class="row">
+          <label>
+            PAN
+            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F">
+          </label>
+          <label>
+            Business name
+            <input type="text" formControlName="businessName" placeholder="Apex Traders Pvt Ltd">
+          </label>
+        </div>
+      </form>
 
-      <ng-container matColumnDef="salary">
-          <th mat-header-cell *matHeaderCellDef> 
-            <span class="thead-title">salary</span>
-            <span (click)="sortData('salary', 'ASC')" class="uparrow"></span>
-            <span (click)="sortData('salary', 'DESC')" class="downarrow"></span>
-          </th>
-          <td mat-cell *matCellDef="let element"> {{element.salary}} </td>
-        </ng-container>
+      <form class="form" [formGroup]="borrowerForm">
+        <div class="row">
+          <label>
+            Legal business name
+            <input type="text" formControlName="legalBusinessName" placeholder="Apex Traders Pvt Ltd">
+          </label>
+          <label>
+            Contact person
+            <input type="text" formControlName="contactPersonName" placeholder="Naveen Rao">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            PAN
+            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F">
+          </label>
+          <label>
+            GSTIN
+            <input type="text" formControlName="gstin" placeholder="29ABCDE1234F1Z5">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Email
+            <input type="email" formControlName="email" placeholder="accounts@example.com">
+          </label>
+          <label>
+            Phone number
+            <input type="text" formControlName="phoneNumber" placeholder="9876543210">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Industry type
+            <input type="text" formControlName="industryType" placeholder="Wholesale Trading">
+          </label>
+          <label>
+            Annual turnover
+            <input type="number" formControlName="annualTurnover" placeholder="25000000">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Monthly income
+            <input type="number" formControlName="monthlyIncome" placeholder="1200000">
+          </label>
+          <div class="spacer"></div>
+        </div>
 
-        <ng-container matColumnDef="operation">
-          <th mat-header-cell *matHeaderCellDef> Details </th>
-          <td mat-cell *matCellDef="let element"> 
-            <button mat-raised-button color="primary" (click)="openDialog(element)" class="btn-update">Update</button> 
-            <button mat-raised-button color="primary" (click)="deleteEmployee(element.id)" class="btn-delete">Delete</button> 
-          </td>
-        </ng-container>
-        
+        <div class="section-subtitle">
+          Addresses
+          <button type="button" class="tiny" (click)="addAddress()">Add address</button>
+        </div>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      
-    </table> -->
- <!-- </mat-drawer-content> 
-</mat-drawer-container> -->
-
-<!-- <a routerLink="loan/overview">Overview</a>
-<a routerLink="loan/business-product">Business Product</a> -->
-
-<!-- <mat-sidenav-container class="example-container">
-  <mat-sidenav mode="side" opened>
-     <ul class="nav navbar-nav">
-          <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}"><a [routerLink]="''" (click)="back()">Employee</a></li>
-          <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}"><a [routerLink]="'/loan'" (click)="showloanData()">Loan</a></li>
-      </ul>
-  </mat-sidenav>
-  <mat-sidenav-content style="padding: 20px;"> <router-outlet></router-outlet></mat-sidenav-content>
-</mat-sidenav-container> -->
-
-<mat-sidenav-container class="example-container" [class.dark-theme]="isDarkTheme">
-  <mat-sidenav *ngIf="!isLoginRoute" mode="side" opened class="sidebar">
-    <ul class="nav navbar-nav">
-      <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
-        <a [routerLink]="''" (click)="back()" class="sidebar-link" matTooltip="Employee">
-          <svg class="sidebar-svg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
-        </a>
-      </li>
-      <li [routerLinkActive]="['active']" [routerLinkActiveOptions]="{exact:true}">
-        <a [routerLink]="'/loan'" (click)="showloanData()" class="sidebar-link" matTooltip="Loan">
-          <svg class="sidebar-svg-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z"/>
-          </svg>
-        </a>
-      </li>
-    </ul>
-  </mat-sidenav>
-  <mat-sidenav-content class="main-content">
-    <div class="content-area" [class.auth-route]="isLoginRoute">
-      <div class="global-utils" *ngIf="!isLoginRoute">
-        <button *ngIf="isHomeRoute && hasAnyRole('ADMIN','LOAN_OFFICER')" mat-raised-button color="primary" (click)="openAddEmployeeDialog()" class="btn-add-employee-corner">Add Employee</button>
-        <button *ngIf="hasAnyRole('ADMIN')" mat-stroked-button color="primary" (click)="goToUserAdmin()" class="btn-admin-users">User Admin</button>
-        <button mat-stroked-button color="primary" (click)="logout()" class="btn-logout">Logout</button>
-        <button mat-icon-button (click)="toggleTheme()" matTooltip="{{ isDarkTheme ? 'Light mode' : 'Dark mode' }}">
-          <mat-icon>{{ isDarkTheme ? 'light_mode' : 'dark_mode' }}</mat-icon>
-        </button>
-        <div class="logo-container">
-          <div class="logo-n">N</div>
-          <div class="logo-text">
-            <div class="logo-main">NAZEER</div>
-            <div class="logo-sub">loan-app</div>
+        <div formArrayName="addresses">
+          <div class="address-card" *ngFor="let address of addressArray.controls; let i = index" [formGroupName]="i">
+            <div class="row">
+              <label>
+                Type
+                <select formControlName="addressType">
+                  <option *ngFor="let type of addressTypes" [value]="type">{{ type }}</option>
+                </select>
+              </label>
+              <label>
+                Line one
+                <input type="text" formControlName="lineOne">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Line two
+                <input type="text" formControlName="lineTwo">
+              </label>
+              <label>
+                City
+                <input type="text" formControlName="city">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                State
+                <input type="text" formControlName="state">
+              </label>
+              <label>
+                Postal code
+                <input type="text" formControlName="postalCode">
+              </label>
+            </div>
+            <div class="row">
+              <label>
+                Country
+                <input type="text" formControlName="country">
+              </label>
+              <div class="inline-actions">
+                <button type="button" class="tiny danger" (click)="removeAddress(i)" [disabled]="addressArray.length === 1">Remove</button>
+              </div>
+            </div>
           </div>
         </div>
+
+        <button type="button" class="primary" (click)="createBorrower()">Create borrower</button>
+      </form>
+
+      <div class="list">
+        <article class="list-card" *ngFor="let borrower of borrowers">
+          <strong>{{ borrower.legalBusinessName }}</strong>
+          <span>{{ borrower.businessPan }} · {{ borrower.industryType }}</span>
+          <small>{{ borrower.contactPersonName }} · {{ borrower.phoneNumber }}</small>
+        </article>
       </div>
-      <router-outlet></router-outlet>
-    </div>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+    </article>
 
+    <article class="panel">
+      <header class="panel__header">
+        <h2>Loan products and rules</h2>
+        <button type="button" class="ghost" (click)="searchProducts()">Search products</button>
+      </header>
 
+      <form class="form" [formGroup]="loanProductSearchForm">
+        <div class="row">
+          <label>
+            Product name
+            <input type="text" formControlName="name" placeholder="Business Term Loan">
+          </label>
+          <label>
+            Active
+            <select formControlName="active">
+              <option value="">Any</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Amount
+            <input type="number" formControlName="amount" placeholder="2500000">
+          </label>
+          <label>
+            Max tenure months
+            <input type="number" formControlName="maxTenureMonths" placeholder="36">
+          </label>
+        </div>
+      </form>
 
+      <form class="form" [formGroup]="loanProductForm">
+        <div class="row">
+          <label>
+            Product code
+            <input type="text" formControlName="productCode" placeholder="BL-TERM-36">
+          </label>
+          <label>
+            Name
+            <input type="text" formControlName="name" placeholder="Business Term Loan">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Min amount
+            <input type="number" formControlName="minAmount">
+          </label>
+          <label>
+            Max amount
+            <input type="number" formControlName="maxAmount">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Interest rate
+            <input type="number" formControlName="interestRate" step="0.1">
+          </label>
+          <label>
+            Tenure months
+            <input type="number" formControlName="tenureMonths">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Eligibility criteria
+            <textarea rows="3" formControlName="eligibilityCriteria"></textarea>
+          </label>
+        </div>
+        <button type="button" class="primary" (click)="createLoanProduct()">Create product</button>
+      </form>
 
+      <form class="form" [formGroup]="ruleForm">
+        <div class="section-subtitle">Eligibility rule engine</div>
+        <div class="row">
+          <label>
+            Rule code
+            <input type="text" formControlName="ruleCode">
+          </label>
+          <label>
+            Rule type
+            <select formControlName="ruleType">
+              <option value="MIN_VALUE">MIN_VALUE</option>
+              <option value="MAX_VALUE">MAX_VALUE</option>
+              <option value="RANGE">RANGE</option>
+              <option value="TEXT_MATCH">TEXT_MATCH</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Rule expression
+            <input type="text" formControlName="ruleExpression">
+          </label>
+          <label>
+            Active
+            <select formControlName="active">
+              <option [ngValue]="true">Yes</option>
+              <option [ngValue]="false">No</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Min value
+            <input type="number" formControlName="minValue">
+          </label>
+          <label>
+            Max value
+            <input type="number" formControlName="maxValue">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Rule text
+            <input type="text" formControlName="ruleValueText">
+          </label>
+          <div class="spacer"></div>
+        </div>
+        <button type="button" class="primary" (click)="createRule()">Create rule</button>
+      </form>
 
+      <div class="list">
+        <article class="list-card" *ngFor="let product of loanProducts">
+          <strong>{{ product.productCode }} · {{ product.name }}</strong>
+          <span>₹{{ formatMoney(product.minAmount) }} - ₹{{ formatMoney(product.maxAmount) }} · {{ product.interestRate }}%</span>
+          <small>Tenure: {{ product.tenureMonths }} months · {{ product.active ? 'Active' : 'Inactive' }}</small>
+        </article>
+      </div>
+    </article>
+
+    <article class="panel">
+      <header class="panel__header">
+        <h2>Eligibility and application workflow</h2>
+        <button type="button" class="ghost" (click)="searchApplications()">Search applications</button>
+      </header>
+
+      <form class="form" [formGroup]="eligibilityForm">
+        <div class="row">
+          <label>
+            Borrower ID
+            <input type="number" formControlName="borrowerId">
+          </label>
+          <label>
+            Product ID
+            <input type="number" formControlName="loanProductId">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Requested amount
+            <input type="number" formControlName="requestedAmount">
+          </label>
+          <label>
+            Requested tenure
+            <input type="number" formControlName="requestedTenureMonths">
+          </label>
+        </div>
+        <button type="button" class="primary" (click)="evaluateEligibility()">Evaluate eligibility</button>
+      </form>
+
+      <div class="result-box" *ngIf="eligibility">
+        <strong [class.pass]="eligibility.eligible" [class.fail]="!eligibility.eligible">
+          {{ eligibility.eligible ? 'Eligible' : 'Not eligible' }}
+        </strong>
+        <p>{{ eligibility.summary }}</p>
+        <ul>
+          <li *ngFor="let rule of eligibility.ruleResults">
+            <span>{{ rule.ruleCode }}</span>
+            <span>{{ rule.passed ? 'Pass' : 'Fail' }}</span>
+            <small>{{ rule.message }}</small>
+          </li>
+        </ul>
+      </div>
+
+      <form class="form" [formGroup]="applicationForm">
+        <div class="row">
+          <label>
+            Borrower ID
+            <input type="number" formControlName="borrowerId">
+          </label>
+          <label>
+            Product ID
+            <input type="number" formControlName="loanProductId">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Requested amount
+            <input type="number" formControlName="requestedAmount">
+          </label>
+          <label>
+            Requested tenure
+            <input type="number" formControlName="requestedTenureMonths">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Purpose
+            <textarea rows="3" formControlName="purpose"></textarea>
+          </label>
+        </div>
+        <button type="button" class="primary" (click)="createApplication()">Create application</button>
+      </form>
+
+      <div class="list">
+        <article class="list-card list-card--selectable" *ngFor="let application of applications" (click)="selectApplication(application)">
+          <strong>{{ application.borrowerName }} · {{ application.loanProductCode }}</strong>
+          <span>₹{{ formatMoney(application.requestedAmount) }} · {{ application.requestedTenureMonths }} months</span>
+          <small>Status: {{ application.status }} · {{ application.eligibilitySummary }}</small>
+        </article>
+      </div>
+    </article>
+
+    <article class="panel">
+      <header class="panel__header">
+        <h2>Approval and disbursement</h2>
+        <div class="chip" *ngIf="selectedApplication">Selected #{{ selectedApplication.id }}</div>
+      </header>
+
+      <div class="selected" *ngIf="selectedApplication">
+        <div class="selected__header">
+          <strong>{{ selectedApplication.borrowerName }}</strong>
+          <span>{{ selectedApplication.status }}</span>
+        </div>
+        <p>{{ selectedApplication.purpose }}</p>
+        <small>{{ selectedApplication.eligibilitySummary }}</small>
+      </div>
+
+      <form class="form" [formGroup]="reviewerForm">
+        <label>
+          Reviewer username
+          <input type="text" formControlName="reviewerUsername">
+        </label>
+        <button type="button" class="secondary" (click)="assignReviewer()">Assign reviewer</button>
+      </form>
+
+      <form class="form" [formGroup]="decisionForm">
+        <div class="row">
+          <label>
+            Decision
+            <select formControlName="approved">
+              <option [ngValue]="true">Approve</option>
+              <option [ngValue]="false">Reject</option>
+            </select>
+          </label>
+          <label>
+            Remarks
+            <input type="text" formControlName="remarks">
+          </label>
+        </div>
+        <button type="button" class="secondary" (click)="submitApplication()">Submit application</button>
+        <button type="button" class="secondary" (click)="decideApplication()">Save decision</button>
+      </form>
+
+      <form class="form" [formGroup]="disbursementForm">
+        <div class="row">
+          <label>
+            Reference
+            <input type="text" formControlName="disbursementReference">
+          </label>
+          <label>
+            Disbursement date
+            <input type="date" formControlName="disbursementDate">
+          </label>
+        </div>
+        <button type="button" class="primary" (click)="disburseApplication()">Disburse selected application</button>
+      </form>
+    </article>
+
+    <article class="panel">
+      <header class="panel__header">
+        <h2>Loan servicing and reports</h2>
+        <div class="chip" *ngIf="selectedAccount">Account {{ selectedAccount.accountNumber }}</div>
+      </header>
+
+      <form class="form" [formGroup]="repaymentForm">
+        <div class="row">
+          <label>
+            Amount
+            <input type="number" formControlName="amount">
+          </label>
+          <label>
+            Payment mode
+            <select formControlName="paymentMode">
+              <option *ngFor="let mode of paymentModes" [value]="mode">{{ mode }}</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Transaction reference
+            <input type="text" formControlName="transactionReference">
+          </label>
+          <label>
+            Payment date
+            <input type="date" formControlName="paymentDate">
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Notes
+            <textarea rows="3" formControlName="notes"></textarea>
+          </label>
+        </div>
+        <button type="button" class="primary" (click)="recordRepayment()">Record repayment</button>
+      </form>
+
+      <div class="list">
+        <article class="list-card list-card--selectable" *ngFor="let account of accounts" (click)="selectAccount(account)">
+          <strong>{{ account.accountNumber }} · {{ account.borrowerName }}</strong>
+          <span>₹{{ formatMoney(account.principalAmount) }} · Outstanding ₹{{ formatMoney(account.outstandingPrincipal) }}</span>
+          <small>{{ account.status }} · Next due {{ account.nextDueDate || 'N/A' }}</small>
+        </article>
+      </div>
+
+      <div class="report">
+        <div class="section-subtitle">Disbursement report</div>
+        <form class="form" [formGroup]="reportForm">
+          <div class="row">
+            <label>
+              From
+              <input type="date" formControlName="from">
+            </label>
+            <label>
+              To
+              <input type="date" formControlName="to">
+            </label>
+          </div>
+          <div class="row">
+            <label>
+              Page size
+              <input type="number" formControlName="size">
+            </label>
+            <div class="inline-actions">
+              <button type="button" class="ghost" (click)="loadReport()">Load report</button>
+              <button type="button" class="ghost" (click)="previousPage()">Prev</button>
+              <button type="button" class="ghost" (click)="nextPage()">Next</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="report-summary" *ngIf="report">
+          <article>
+            <span>Disbursed count</span>
+            <strong>{{ report.disbursedCount }}</strong>
+          </article>
+          <article>
+            <span>Total principal</span>
+            <strong>₹{{ formatMoney(report.totalPrincipalDisbursed) }}</strong>
+          </article>
+          <article>
+            <span>Outstanding</span>
+            <strong>₹{{ formatMoney(report.totalOutstandingPrincipal) }}</strong>
+          </article>
+        </div>
+
+        <div class="list">
+          <article class="list-card" *ngFor="let item of report?.items ?? []">
+            <strong>{{ item.accountNumber }} · {{ item.borrowerName }}</strong>
+            <span>{{ item.productCode }} · ₹{{ formatMoney(item.principalAmount) }}</span>
+            <small>{{ item.status }} · Disbursed {{ item.disbursedAt | date:'mediumDate' }}</small>
+          </article>
+        </div>
+      </div>
+    </article>
+  </section>
+</main>
 

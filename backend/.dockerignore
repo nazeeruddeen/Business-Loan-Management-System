@@ -1,12 +1,4 @@
-# Backend build context
-.git
 target
-maven_output.txt
-maven_output_utf8.txt
-
-# IDE
-.vscode
+.git
 .idea
-
-# OS
-*.log
+*.iml

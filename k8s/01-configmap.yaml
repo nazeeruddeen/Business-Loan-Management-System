@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: business-loan-config
+  namespace: business-loan
+data:
+  SERVER_PORT: "8010"
+  SPRING_DATASOURCE_URL: jdbc:mysql://business-loan-mysql:3306/business_loan_management?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+  SPRING_JPA_SHOW_SQL: "false"
+  SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 50MB
+  SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 50MB
+  APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRATION_MS: "900000"
+  APP_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION_MS: "604800000"

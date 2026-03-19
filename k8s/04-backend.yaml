@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: business-loan-backend
+  namespace: business-loan
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: business-loan-backend
+  template:
+    metadata:
+      labels:
+        app: business-loan-backend
+    spec:
+      containers:
+        - name: backend
+          image: business-loan-management-system:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8010
+          envFrom:
+            - configMapRef:
+                name: business-loan-config
+            - secretRef:
+                name: business-loan-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: business-loan-backend
+  namespace: business-loan
+spec:
+  selector:
+    app: business-loan-backend
+  ports:
+    - port: 80
+      targetPort: 8010

@@ -21,8 +21,8 @@ public class SecurityDataInitializer implements CommandLineRunner {
     public void run(String... args) {
         ensureUser("admin", "Admin@123", UserRole.ADMIN);
         ensureUser("officer", "Officer@123", UserRole.LOAN_OFFICER);
-        ensureUser("analyst", "Analyst@123", UserRole.ANALYST);
-        ensureUser("viewer", "Viewer@123", UserRole.VIEWER);
+        ensureUser("reviewer", "Reviewer@123", UserRole.REVIEWER);
+        ensureUser("borrower", "Borrower@123", UserRole.BORROWER);
     }
 
     private void ensureUser(String username, String password, UserRole role) {

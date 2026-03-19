@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.employee</groupId>
-    <artifactId>loan-system</artifactId>
+    <groupId>com.nazeer.projects</groupId>
+    <artifactId>business-loan-management-system</artifactId>
     <version>1.0.0</version>
-    <name>Employee Loan System</name>
-    <description>Employee and Loan Management System</description>
+    <name>Business Loan Management System</name>
+    <description>Business Loan Management System</description>
 
     <properties>
         <java.version>17</java.version>
@@ -42,6 +42,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
         </dependency>
 
         <!-- Database -->
@@ -101,6 +106,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
