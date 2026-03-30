@@ -5,6 +5,7 @@ import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, Validator
 import { Observable, forkJoin, of } from 'rxjs';
 import { AuthSessionService } from './auth-session.service';
 import { BusinessLoanApiService } from './business-loan-api.service';
+import { environment } from '../environments/environment';
 import {
   ApiErrorResponse,
   ApplicationDecisionRequest,
@@ -50,7 +51,7 @@ type AppTab = 'dashboard' | 'borrowers' | 'products' | 'applications' | 'approva
 })
 export class AppComponent implements OnInit {
   readonly title = 'Business Loan Management System';
-  readonly apiBaseUrl = 'http://localhost:8010/api/v1';
+  readonly apiBaseUrl = environment.apiBaseUrl;
   readonly addressTypes: BorrowerAddressRequest['addressType'][] = ['REGISTERED', 'OPERATIONAL', 'CORRESPONDENCE'];
   readonly paymentModes: PaymentMode[] = ['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CARD', 'BANK_TRANSFER'];
   readonly applicationStatuses: ApplicationStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'DISBURSED'];
