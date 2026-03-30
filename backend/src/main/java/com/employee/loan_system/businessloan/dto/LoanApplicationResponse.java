@@ -1,6 +1,7 @@
 package com.employee.loan_system.businessloan.dto;
 
 import com.employee.loan_system.businessloan.entity.ApplicationStatus;
+import com.employee.loan_system.businessloan.entity.BorrowerDocumentType;
 import lombok.Builder;
 
 import java.math.BigDecimal;
@@ -21,6 +22,8 @@ public record LoanApplicationResponse(
         boolean eligibilityPassed,
         String eligibilitySummary,
         String reviewerUsername,
+        boolean borrowerKycComplete,
+        List<BorrowerDocumentType> missingRequiredDocuments,
         LocalDateTime submittedAt,
         LocalDateTime decisionedAt,
         LocalDateTime disbursedAt,

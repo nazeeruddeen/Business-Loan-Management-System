@@ -1,6 +1,7 @@
 package com.employee.loan_system.businessloan.service;
 
 import com.employee.loan_system.businessloan.dto.BorrowerAddressRequest;
+import com.employee.loan_system.businessloan.dto.BorrowerKycSummaryResponse;
 import com.employee.loan_system.businessloan.dto.CreateBorrowerRequest;
 import com.employee.loan_system.businessloan.entity.AddressType;
 import com.employee.loan_system.businessloan.entity.Borrower;
@@ -29,6 +30,9 @@ class BorrowerServiceTest {
     @Mock
     private BorrowerRepository borrowerRepository;
 
+    @Mock
+    private BorrowerDocumentService borrowerDocumentService;
+
     @InjectMocks
     private BorrowerService borrowerService;
 
@@ -42,6 +46,14 @@ class BorrowerServiceTest {
             borrower.setCreatedAt(LocalDateTime.now());
             return borrower;
         });
+        when(borrowerDocumentService.getKycSummary(any(Borrower.class))).thenReturn(
+                BorrowerKycSummaryResponse.builder()
+                        .kycComplete(false)
+                        .requiredDocumentCount(4)
+                        .verifiedDocumentCount(0)
+                        .totalDocumentCount(0)
+                        .missingRequiredDocuments(List.of())
+                        .build());
 
         var response = borrowerService.createBorrower(request);
 

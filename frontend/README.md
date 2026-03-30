@@ -1,6 +1,11 @@
 # Business Loan Frontend
 
-Angular dashboard shell for the Business Loan Management System backend.
+Angular operator console for the Business Loan Management System backend.
+
+## Dev Server
+
+- Port: `4300`
+- API base URL: `http://localhost:8010/api/v1`
 
 ## Run
 
@@ -9,20 +14,20 @@ npm install
 npm start
 ```
 
-Default API base URL:
+## What the UI Covers
 
-- `http://localhost:8010/api/v1`
+- JWT-backed sign-in against the Spring Boot backend
+- borrower onboarding with address capture
+- borrower KYC document intake and verification
+- eligibility evaluation
+- draft application creation
+- application submission, reviewer assignment, and decisioning
+- loan disbursement
+- repayment capture
+- dashboard summary and disbursement CSV export
 
-Default dev-server port:
+## Seeded Users
 
-- `4300`
-
-## What the UI covers
-
-- Dashboard metrics
-- Borrower onboarding
-- Loan product setup
-- Eligibility evaluation
-- Loan application workflow
-- Loan servicing and repayment actions
-- Disbursement reporting and CSV export
+- `admin / Admin@123`
+- `officer / Officer@123`
+- `reviewer / Reviewer@123`

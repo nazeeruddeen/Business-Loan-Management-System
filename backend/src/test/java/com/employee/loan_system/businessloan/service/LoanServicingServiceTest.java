@@ -15,6 +15,7 @@ import com.employee.loan_system.businessloan.repository.LoanAccountRepository;
 import com.employee.loan_system.businessloan.repository.LoanApplicationRepository;
 import com.employee.loan_system.businessloan.repository.LoanRepaymentTransactionRepository;
 import com.employee.loan_system.businessloan.repository.RepaymentInstallmentRepository;
+import com.employee.loan_system.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -84,7 +85,7 @@ class LoanServicingServiceTest {
         request.setPaymentDate(LocalDate.now());
 
         assertThatThrownBy(() -> loanServicingService.recordRepayment(1L, request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("active accounts");
     }
 

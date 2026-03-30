@@ -19,6 +19,8 @@ public record BorrowerResponse(
         BigDecimal annualTurnover,
         BigDecimal monthlyIncome,
         LocalDateTime createdAt,
-        List<BorrowerAddressResponse> addresses
+        List<BorrowerAddressResponse> addresses,
+        List<BorrowerDocumentResponse> documents,
+        BorrowerKycSummaryResponse kycSummary
 ) {
 }

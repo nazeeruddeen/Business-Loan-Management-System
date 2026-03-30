@@ -15,6 +15,7 @@ import com.employee.loan_system.businessloan.repository.LoanAccountRepository;
 import com.employee.loan_system.businessloan.repository.LoanApplicationRepository;
 import com.employee.loan_system.businessloan.repository.LoanRepaymentTransactionRepository;
 import com.employee.loan_system.businessloan.repository.RepaymentInstallmentRepository;
+import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -76,12 +77,12 @@ public class LoanServicingService {
         LoanAccount account = loanAccountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan account not found with id: " + accountId));
         if (account.getStatus() != LoanAccountStatus.ACTIVE) {
-            throw new IllegalArgumentException("Repayments can only be recorded for active accounts");
+            throw new BusinessRuleException("Repayments can only be recorded for active accounts");
         }
 
         BigDecimal amountRemaining = request.getAmount().setScale(2, RoundingMode.HALF_UP);
         if (amountRemaining.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Repayment amount must be greater than zero");
+            throw new BusinessRuleException("Repayment amount must be greater than zero");
         }
 
         BigDecimal totalAppliedPrincipal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -128,7 +129,7 @@ public class LoanServicingService {
         }
 
         if (amountRemaining.compareTo(BigDecimal.ZERO) > 0) {
-            throw new IllegalArgumentException("Repayment amount exceeds the outstanding schedule");
+            throw new BusinessRuleException("Repayment amount exceeds the outstanding schedule");
         }
 
         account.setOutstandingPrincipal(account.getOutstandingPrincipal().subtract(totalAppliedPrincipal)

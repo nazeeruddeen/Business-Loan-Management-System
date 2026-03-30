@@ -1,562 +1,735 @@
-<div class="app-layout">
-  <aside class="sidebar">
-    <div class="sidebar__logo">
-      <div class="logo-icon"></div>
-      <h2>BizLoan</h2>
-    </div>
-    <nav class="sidebar__nav">
-      <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
-      <button [class.active]="activeTab === 'borrowers'" (click)="setTab('borrowers')">Borrowers</button>
-      <button [class.active]="activeTab === 'products'" (click)="setTab('products')">Products</button>
-      <button [class.active]="activeTab === 'applications'" (click)="setTab('applications')">Applications</button>
-      <button [class.active]="activeTab === 'approval'" (click)="setTab('approval')">Approval</button>
-      <button [class.active]="activeTab === 'servicing'" (click)="setTab('servicing')">Servicing</button>
-    </nav>
-  </aside>
-
-  <main class="main-content">
-    <header class="topbar">
+<ng-container *ngIf="!isAuthenticated; else workspace">
+  <div class="login-shell">
+    <section class="login-panel">
+      <div class="eyebrow">Secure operator access</div>
       <h1>{{ title }}</h1>
-      <div class="topbar__actions">
-        <span class="api-note">API: <strong>{{ apiBaseUrl }}</strong></span>
-        <button type="button" class="primary ghost" (click)="refreshAll()">Refresh Data</button>
-      </div>
-    </header>
-    
-    <div style="margin-bottom: 24px;" *ngIf="notice.text !== 'Ready' && notice.text">
-      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
-    </div>
-
-  <section class="hero animated-panel" *ngIf="activeTab === 'dashboard'">
-    <div class="hero__copy">
-      <div class="eyebrow">Core lending workflow</div>
-      <h2>Welcome back</h2>
       <p>
-        Borrower onboarding, loan products, eligibility, application review, disbursement, servicing, and reporting in one modular dashboard.
+        Sign in with a seeded platform user to work against the real Spring Boot APIs on
+        <strong>{{ apiBaseUrl }}</strong>.
       </p>
-    </div>
 
-    <div class="hero__metrics">
-      <article class="metric">
-        <span>Total applications</span>
-        <strong>{{ summary.totalLoanApplications }}</strong>
-      </article>
-      <article class="metric">
-        <span>Approved</span>
-        <strong>{{ summary.approvedLoanApplications }}</strong>
-      </article>
-      <article class="metric">
-        <span>Active accounts</span>
-        <strong>{{ summary.activeLoanAccounts }}</strong>
-      </article>
-      <article class="metric">
-        <span>Overdue installments</span>
-        <strong>{{ summary.overdueInstallments }}</strong>
-      </article>
-    </div>
-  </section>
-
-  <section class="view-container">
-    <article class="panel animated-panel" *ngIf="activeTab === 'borrowers'">
-      <header class="panel__header">
-        <h2>Borrower onboarding</h2>
-        <button type="button" class="ghost" (click)="searchBorrowers()">Search borrowers</button>
-      </header>
-
-      <form class="form" [formGroup]="borrowerSearchForm">
-        <div class="row">
-          <label>
-            PAN
-            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F" maxlength="10">
-          </label>
-          <label>
-            Business name
-            <input type="text" formControlName="businessName" placeholder="Business name">
-          </label>
-        </div>
+      <form class="form" [formGroup]="authForm">
+        <label>
+          Username
+          <input type="text" formControlName="username" placeholder="admin">
+        </label>
+        <label>
+          Password
+          <input type="password" formControlName="password" placeholder="Admin@123">
+        </label>
+        <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping">
+          {{ actionBusy === 'login' ? 'Signing in...' : 'Sign in' }}
+        </button>
       </form>
 
-      <form class="form" [formGroup]="borrowerForm">
-        <div class="row">
-          <label>
-            Legal business name
-            <input type="text" formControlName="legalBusinessName" placeholder="Legal business name">
-          </label>
-          <label>
-            Contact person
-            <input type="text" formControlName="contactPersonName" placeholder="Contact person name">
-          </label>
+      <div class="seeded-users">
+        <span>Seeded users:</span>
+        <small>admin / Admin&#64;123, officer / Officer&#64;123, reviewer / Reviewer&#64;123</small>
+      </div>
+
+      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+    </section>
+  </div>
+</ng-container>
+
+<ng-template #workspace>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar__logo">
+        <div class="logo-icon"></div>
+        <div>
+          <h2>BizLoan</h2>
+          <small>{{ currentUser?.username }} · {{ currentUser?.role }}</small>
         </div>
-        <div class="row">
-          <label>
-            PAN
-            <input type="text" formControlName="businessPan" placeholder="ABCDE1234F" maxlength="10">
-          </label>
-          <label>
-            GSTIN
-            <input type="text" formControlName="gstin" placeholder="29ABCDE1234F1Z5" maxlength="15">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Email
-            <input type="email" formControlName="email" placeholder="accounts@example.com">
-          </label>
-          <label>
-            Phone number
-            <input type="text" formControlName="phoneNumber" placeholder="9876543210">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Industry type
-            <input type="text" formControlName="industryType" placeholder="Industry type">
-          </label>
-          <label>
-            Annual turnover
-            <input type="number" formControlName="annualTurnover" min="1" step="1" placeholder="25000000">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Monthly income
-            <input type="number" formControlName="monthlyIncome" min="1" step="1" placeholder="1200000">
-          </label>
-          <div class="spacer"></div>
+      </div>
+
+      <nav class="sidebar__nav">
+        <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
+        <button [class.active]="activeTab === 'borrowers'" (click)="setTab('borrowers')">Borrowers & KYC</button>
+        <button [class.active]="activeTab === 'products'" (click)="setTab('products')">Products</button>
+        <button [class.active]="activeTab === 'applications'" (click)="setTab('applications')">Applications</button>
+        <button [class.active]="activeTab === 'approval'" (click)="setTab('approval')">Approval</button>
+        <button [class.active]="activeTab === 'servicing'" (click)="setTab('servicing')">Servicing</button>
+      </nav>
+
+      <button type="button" class="ghost sidebar__logout" (click)="logout()" [disabled]="actionBusy === 'logout'">
+        {{ actionBusy === 'logout' ? 'Signing out...' : 'Sign out' }}
+      </button>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <h1>{{ title }}</h1>
+          <p class="subhead">Professional lending workflow with KYC gating, review controls, disbursement, servicing, and reporting.</p>
         </div>
 
-        <div class="section-subtitle">
-          Addresses
-          <button type="button" class="tiny" (click)="addAddress()">Add address</button>
+        <div class="topbar__actions">
+          <span class="api-note">API: <strong>{{ apiBaseUrl }}</strong></span>
+          <button type="button" class="primary ghost" (click)="refreshAll()" [disabled]="pageBusy">
+            {{ pageBusy ? 'Refreshing...' : 'Refresh Live Data' }}
+          </button>
+        </div>
+      </header>
+
+      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+
+      <section class="hero animated-panel" *ngIf="activeTab === 'dashboard'">
+        <div class="hero__copy">
+          <div class="eyebrow">Live lending control room</div>
+          <h2>Operational snapshot</h2>
+          <p>
+            The dashboard reflects live borrower onboarding, KYC readiness, application workflow progression, disbursement, and servicing outcomes from the backend.
+          </p>
         </div>
 
-        <div formArrayName="addresses">
-          <div class="address-card" *ngFor="let address of addressArray.controls; let i = index" [formGroupName]="i">
+        <div class="hero__metrics">
+          <article class="metric">
+            <span>Total applications</span>
+            <strong>{{ summary.totalLoanApplications }}</strong>
+          </article>
+          <article class="metric">
+            <span>Approved applications</span>
+            <strong>{{ summary.approvedLoanApplications }}</strong>
+          </article>
+          <article class="metric">
+            <span>Active accounts</span>
+            <strong>{{ summary.activeLoanAccounts }}</strong>
+          </article>
+          <article class="metric">
+            <span>Overdue installments</span>
+            <strong>{{ summary.overdueInstallments }}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-container">
+        <article class="panel animated-panel" *ngIf="activeTab === 'borrowers'">
+          <header class="panel__header">
+            <h2>Borrower onboarding and KYC</h2>
+            <button type="button" class="ghost" (click)="searchBorrowers()">Reload borrowers</button>
+          </header>
+
+          <div class="split-grid">
+            <section>
+              <form class="form" [formGroup]="borrowerSearchForm">
+                <div class="row">
+                  <label>
+                    PAN
+                    <input type="text" formControlName="businessPan" placeholder="ABCDE1234F">
+                  </label>
+                  <label>
+                    Business name
+                    <input type="text" formControlName="businessName" placeholder="Business name">
+                  </label>
+                </div>
+              </form>
+
+              <form class="form" [formGroup]="borrowerForm">
+                <div class="row">
+                  <label>
+                    Legal business name
+                    <input type="text" formControlName="legalBusinessName">
+                  </label>
+                  <label>
+                    Contact person
+                    <input type="text" formControlName="contactPersonName">
+                  </label>
+                </div>
+
+                <div class="row">
+                  <label>
+                    PAN
+                    <input type="text" formControlName="businessPan" maxlength="10">
+                  </label>
+                  <label>
+                    GSTIN
+                    <input type="text" formControlName="gstin" maxlength="15">
+                  </label>
+                </div>
+
+                <div class="row">
+                  <label>
+                    Email
+                    <input type="email" formControlName="email">
+                  </label>
+                  <label>
+                    Phone number
+                    <input type="text" formControlName="phoneNumber">
+                  </label>
+                </div>
+
+                <div class="row">
+                  <label>
+                    Industry type
+                    <input type="text" formControlName="industryType">
+                  </label>
+                  <label>
+                    Annual turnover
+                    <input type="number" formControlName="annualTurnover" min="1" step="1">
+                  </label>
+                </div>
+
+                <div class="row">
+                  <label>
+                    Monthly income
+                    <input type="number" formControlName="monthlyIncome" min="1" step="1">
+                  </label>
+                  <div class="spacer"></div>
+                </div>
+
+                <div class="section-subtitle">
+                  <span>Addresses</span>
+                  <button type="button" class="tiny" (click)="addAddress()">Add address</button>
+                </div>
+
+                <div formArrayName="addresses">
+                  <div class="address-card" *ngFor="let address of addressArray.controls; let i = index" [formGroupName]="i">
+                    <div class="row">
+                      <label>
+                        Type
+                        <select formControlName="addressType">
+                          <option *ngFor="let type of addressTypes" [value]="type">{{ type }}</option>
+                        </select>
+                      </label>
+                      <label>
+                        Line one
+                        <input type="text" formControlName="lineOne">
+                      </label>
+                    </div>
+
+                    <div class="row">
+                      <label>
+                        Line two
+                        <input type="text" formControlName="lineTwo">
+                      </label>
+                      <label>
+                        City
+                        <input type="text" formControlName="city">
+                      </label>
+                    </div>
+
+                    <div class="row">
+                      <label>
+                        State
+                        <input type="text" formControlName="state">
+                      </label>
+                      <label>
+                        Postal code
+                        <input type="text" formControlName="postalCode">
+                      </label>
+                    </div>
+
+                    <div class="row">
+                      <label>
+                        Country
+                        <input type="text" formControlName="country">
+                      </label>
+                      <div class="inline-actions align-end">
+                        <button type="button" class="tiny danger" (click)="removeAddress(i)" [disabled]="addressArray.length === 1">Remove</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="button" class="primary" (click)="createBorrower()" [disabled]="actionBusy === 'createBorrower'">
+                  {{ actionBusy === 'createBorrower' ? 'Creating...' : 'Create borrower' }}
+                </button>
+              </form>
+
+              <div class="list">
+                <article
+                  class="list-card list-card--selectable"
+                  *ngFor="let borrower of borrowers"
+                  (click)="selectBorrower(borrower)"
+                  [class.is-selected]="selectedBorrower?.id === borrower.id">
+                  <strong>{{ borrower.legalBusinessName }}</strong>
+                  <span>{{ borrower.businessPan }} · {{ borrower.industryType }}</span>
+                  <small>{{ borrower.contactPersonName }} · {{ borrower.phoneNumber }}</small>
+                  <div class="chip-list">
+                    <span class="chip" [attr.data-kind]="kycBadgeKind(borrower)">
+                      {{ borrower.kycSummary.kycComplete ? 'KYC complete' : 'KYC pending' }}
+                    </span>
+                    <span class="chip muted">{{ borrower.kycSummary.verifiedDocumentCount }}/{{ borrower.kycSummary.requiredDocumentCount }} verified</span>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="kyc-panel" *ngIf="selectedBorrower">
+              <div class="selected">
+                <div class="selected__header">
+                  <strong>{{ selectedBorrower.legalBusinessName }}</strong>
+                  <span class="chip" [attr.data-kind]="kycBadgeKind(selectedBorrower)">
+                    {{ selectedBorrower.kycSummary.kycComplete ? 'KYC complete' : 'KYC pending' }}
+                  </span>
+                </div>
+                <p>{{ selectedBorrower.contactPersonName }} · {{ selectedBorrower.email }}</p>
+                <small *ngIf="selectedBorrower.kycSummary.missingRequiredDocuments.length">
+                  Missing: {{ selectedBorrower.kycSummary.missingRequiredDocuments.join(', ') }}
+                </small>
+              </div>
+
+              <form class="form" [formGroup]="documentForm">
+                <div class="section-subtitle">Document intake</div>
+                <div class="row">
+                  <label>
+                    Document type
+                    <select formControlName="documentType">
+                      <option *ngFor="let type of documentTypes" [value]="type">{{ formatLabel(type) }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    File name
+                    <input type="text" formControlName="fileName" placeholder="pan-card.pdf">
+                  </label>
+                </div>
+
+                <div class="row">
+                  <label>
+                    File reference
+                    <input type="text" formControlName="fileReference" placeholder="s3://kyc/bizloan/pan-card.pdf">
+                  </label>
+                  <label>
+                    Remarks
+                    <input type="text" formControlName="remarks" placeholder="Uploaded by ops team">
+                  </label>
+                </div>
+
+                <button type="button" class="primary" (click)="createBorrowerDocument()" [disabled]="actionBusy === 'createDocument'">
+                  {{ actionBusy === 'createDocument' ? 'Saving...' : 'Add document metadata' }}
+                </button>
+              </form>
+
+              <form class="form" [formGroup]="documentReviewForm">
+                <div class="section-subtitle">Document review remarks</div>
+                <label>
+                  Review remarks
+                  <input type="text" formControlName="remarks" placeholder="Verified against submitted KYC pack">
+                </label>
+              </form>
+
+              <div class="list">
+                <article class="list-card" *ngFor="let document of borrowerDocuments">
+                  <strong>{{ formatLabel(document.documentType) }}</strong>
+                  <span>{{ document.fileName }} · {{ document.documentStatus }}</span>
+                  <small>{{ document.fileReference }}</small>
+                  <div class="chip-list">
+                    <span class="chip muted" *ngIf="document.requiredDocument">Required</span>
+                    <span class="chip muted" *ngIf="document.reviewedBy">Reviewed by {{ document.reviewedBy }}</span>
+                  </div>
+                  <div class="inline-actions">
+                    <button type="button" class="ghost tiny" (click)="reviewDocument(document, 'VERIFIED')" [disabled]="!documentCanVerify(document) || actionBusy === 'reviewDocument-' + document.id">
+                      Verify
+                    </button>
+                    <button type="button" class="danger tiny" (click)="reviewDocument(document, 'REJECTED')" [disabled]="!documentCanReject(document) || actionBusy === 'reviewDocument-' + document.id">
+                      Reject
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </article>
+
+        <article class="panel animated-panel" *ngIf="activeTab === 'products'">
+          <header class="panel__header">
+            <h2>Loan products and eligibility rules</h2>
+            <button type="button" class="ghost" (click)="searchProducts()">Reload products</button>
+          </header>
+
+          <form class="form" [formGroup]="loanProductSearchForm">
             <div class="row">
               <label>
-                Type
-                <select formControlName="addressType">
-                  <option *ngFor="let type of addressTypes" [value]="type">{{ type }}</option>
+                Product name
+                <input type="text" formControlName="name">
+              </label>
+              <label>
+                Active
+                <select formControlName="active">
+                  <option value="">Any</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
                 </select>
               </label>
-              <label>
-                Line one
-                <input type="text" formControlName="lineOne">
-              </label>
             </div>
-            <div class="row">
+          </form>
+
+          <div class="split-grid">
+            <form class="form" [formGroup]="loanProductForm">
+              <div class="row">
+                <label>
+                  Product code
+                  <input type="text" formControlName="productCode">
+                </label>
+                <label>
+                  Product name
+                  <input type="text" formControlName="name">
+                </label>
+              </div>
+              <div class="row">
+                <label>
+                  Min amount
+                  <input type="number" formControlName="minAmount">
+                </label>
+                <label>
+                  Max amount
+                  <input type="number" formControlName="maxAmount">
+                </label>
+              </div>
+              <div class="row">
+                <label>
+                  Interest rate
+                  <input type="number" formControlName="interestRate" step="0.1">
+                </label>
+                <label>
+                  Tenure months
+                  <input type="number" formControlName="tenureMonths" min="1">
+                </label>
+              </div>
               <label>
-                Line two
-                <input type="text" formControlName="lineTwo">
+                Eligibility criteria
+                <textarea rows="3" formControlName="eligibilityCriteria"></textarea>
               </label>
+              <button type="button" class="primary" (click)="createLoanProduct()" [disabled]="actionBusy === 'createProduct'">
+                {{ actionBusy === 'createProduct' ? 'Creating...' : 'Create product' }}
+              </button>
+            </form>
+
+            <form class="form" [formGroup]="ruleForm">
+              <div class="section-subtitle">Eligibility rule engine</div>
+              <div class="row">
+                <label>
+                  Rule code
+                  <input type="text" formControlName="ruleCode">
+                </label>
+                <label>
+                  Rule type
+                  <input type="text" formControlName="ruleType">
+                </label>
+              </div>
               <label>
-                City
-                <input type="text" formControlName="city">
+                Rule expression
+                <input type="text" formControlName="ruleExpression">
               </label>
+              <div class="row">
+                <label>
+                  Min value
+                  <input type="number" formControlName="minValue">
+                </label>
+                <label>
+                  Max value
+                  <input type="number" formControlName="maxValue">
+                </label>
+              </div>
+              <label>
+                Rule text
+                <input type="text" formControlName="ruleValueText">
+              </label>
+              <button type="button" class="primary" (click)="createRule()" [disabled]="actionBusy === 'createRule'">
+                {{ actionBusy === 'createRule' ? 'Creating...' : 'Create rule' }}
+              </button>
+            </form>
+          </div>
+
+          <div class="list">
+            <article class="list-card" *ngFor="let product of loanProducts">
+              <strong>{{ product.productCode }} · {{ product.name }}</strong>
+              <span>₹{{ formatMoney(product.minAmount) }} - ₹{{ formatMoney(product.maxAmount) }} · {{ product.interestRate }}%</span>
+              <small>Tenure {{ product.tenureMonths }} months · {{ product.active ? 'Active' : 'Inactive' }}</small>
+            </article>
+          </div>
+        </article>
+
+        <article class="panel animated-panel" *ngIf="activeTab === 'applications'">
+          <header class="panel__header">
+            <h2>Eligibility and application draft flow</h2>
+            <button type="button" class="ghost" (click)="searchApplications()">Reload applications</button>
+          </header>
+
+          <div class="split-grid">
+            <div>
+              <form class="form" [formGroup]="eligibilityForm">
+                <div class="row">
+                  <label>
+                    Borrower ID
+                    <input type="number" formControlName="borrowerId" min="1">
+                  </label>
+                  <label>
+                    Product ID
+                    <input type="number" formControlName="loanProductId" min="1">
+                  </label>
+                </div>
+                <div class="row">
+                  <label>
+                    Requested amount
+                    <input type="number" formControlName="requestedAmount" min="1">
+                  </label>
+                  <label>
+                    Tenure months
+                    <input type="number" formControlName="requestedTenureMonths" min="1">
+                  </label>
+                </div>
+                <button type="button" class="primary" (click)="evaluateEligibility()" [disabled]="actionBusy === 'evaluateEligibility'">
+                  {{ actionBusy === 'evaluateEligibility' ? 'Evaluating...' : 'Evaluate eligibility' }}
+                </button>
+              </form>
+
+              <div class="result-box" *ngIf="eligibility">
+                <strong [class.pass]="eligibility.eligible" [class.fail]="!eligibility.eligible">
+                  {{ eligibility.eligible ? 'Eligible' : 'Not eligible' }}
+                </strong>
+                <p>{{ eligibility.summary }}</p>
+                <ul>
+                  <li *ngFor="let rule of eligibility.ruleResults">
+                    <span>{{ rule.ruleCode }}</span>
+                    <span>{{ rule.passed ? 'Pass' : 'Fail' }}</span>
+                    <small>{{ rule.message }}</small>
+                  </li>
+                </ul>
+              </div>
             </div>
-            <div class="row">
+
+            <form class="form" [formGroup]="applicationForm">
+              <div class="row">
+                <label>
+                  Borrower ID
+                  <input type="number" formControlName="borrowerId" min="1">
+                </label>
+                <label>
+                  Product ID
+                  <input type="number" formControlName="loanProductId" min="1">
+                </label>
+              </div>
+              <div class="row">
+                <label>
+                  Requested amount
+                  <input type="number" formControlName="requestedAmount" min="1">
+                </label>
+                <label>
+                  Tenure months
+                  <input type="number" formControlName="requestedTenureMonths" min="1">
+                </label>
+              </div>
               <label>
-                State
-                <input type="text" formControlName="state">
+                Purpose
+                <textarea rows="3" formControlName="purpose"></textarea>
               </label>
-              <label>
-                Postal code
-                <input type="text" formControlName="postalCode" maxlength="10">
-              </label>
+              <button type="button" class="primary" (click)="createApplication()" [disabled]="actionBusy === 'createApplication'">
+                {{ actionBusy === 'createApplication' ? 'Creating...' : 'Create application' }}
+              </button>
+            </form>
+          </div>
+
+          <div class="list">
+            <article
+              class="list-card list-card--selectable"
+              *ngFor="let application of applications"
+              (click)="selectApplication(application)"
+              [class.is-selected]="selectedApplication?.id === application.id">
+              <strong>{{ application.borrowerName }} · {{ application.loanProductCode }}</strong>
+              <span>₹{{ formatMoney(application.requestedAmount) }} · {{ application.requestedTenureMonths }} months</span>
+              <small>Status {{ application.status }} · {{ application.eligibilitySummary }}</small>
+              <div class="chip-list">
+                <span class="chip" [attr.data-kind]="application.borrowerKycComplete ? 'success' : 'warning'">
+                  {{ application.borrowerKycComplete ? 'KYC ready' : 'KYC incomplete' }}
+                </span>
+              </div>
+            </article>
+          </div>
+        </article>
+
+        <article class="panel animated-panel" *ngIf="activeTab === 'approval'">
+          <header class="panel__header">
+            <h2>Approval routing and disbursement</h2>
+            <div class="chip" *ngIf="selectedApplication">Selected #{{ selectedApplication.id }}</div>
+          </header>
+
+          <div class="selected" *ngIf="selectedApplication">
+            <div class="selected__header">
+              <strong>{{ selectedApplication.borrowerName }}</strong>
+              <span>{{ selectedApplication.status }}</span>
             </div>
-            <div class="row">
+            <p>{{ selectedApplication.purpose }}</p>
+            <small>KYC ready: {{ selectedApplication.borrowerKycComplete ? 'Yes' : 'No' }}</small>
+          </div>
+
+          <div class="split-grid">
+            <form class="form" [formGroup]="reviewerForm">
+              <div class="section-subtitle">Submission and reviewer assignment</div>
+              <button type="button" class="secondary" (click)="submitApplication()" [disabled]="!selectedApplication || actionBusy === 'submitApplication'">
+                {{ actionBusy === 'submitApplication' ? 'Submitting...' : 'Submit application' }}
+              </button>
               <label>
-                Country
-                <input type="text" formControlName="country">
+                Reviewer
+                <select formControlName="reviewerUserId">
+                  <option [ngValue]="null">Select reviewer</option>
+                  <option *ngFor="let reviewer of reviewers" [ngValue]="reviewer.id">
+                    {{ reviewer.username }} ({{ reviewer.role }})
+                  </option>
+                </select>
               </label>
-              <div class="inline-actions">
-                <button type="button" class="tiny danger" (click)="removeAddress(i)" [disabled]="addressArray.length === 1">Remove</button>
+              <button type="button" class="secondary" (click)="assignReviewer()" [disabled]="!selectedApplication || actionBusy === 'assignReviewer'">
+                {{ actionBusy === 'assignReviewer' ? 'Assigning...' : 'Assign reviewer' }}
+              </button>
+            </form>
+
+            <div>
+              <form class="form" [formGroup]="decisionForm">
+                <div class="section-subtitle">Decision</div>
+                <div class="row">
+                  <label>
+                    Decision
+                    <select formControlName="decisionStatus">
+                      <option *ngFor="let status of decisionStatuses" [value]="status">{{ status }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    Remarks
+                    <input type="text" formControlName="remarks">
+                  </label>
+                </div>
+                <button type="button" class="secondary" (click)="decideApplication()" [disabled]="!selectedApplication || actionBusy === 'decideApplication'">
+                  {{ actionBusy === 'decideApplication' ? 'Saving...' : 'Save decision' }}
+                </button>
+              </form>
+
+              <form class="form" [formGroup]="disbursementForm">
+                <div class="section-subtitle">Disbursement</div>
+                <div class="row">
+                  <label>
+                    Disbursement reference
+                    <input type="text" formControlName="disbursementReference">
+                  </label>
+                  <label>
+                    Disbursement date
+                    <input type="date" formControlName="disbursementDate">
+                  </label>
+                </div>
+                <button type="button" class="primary" (click)="disburseApplication()" [disabled]="!selectedApplication || actionBusy === 'disburseApplication'">
+                  {{ actionBusy === 'disburseApplication' ? 'Disbursing...' : 'Disburse application' }}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="history-list" *ngIf="selectedApplication?.history?.length">
+            <div class="section-subtitle">Workflow history</div>
+            <article class="timeline-card" *ngFor="let item of selectedApplication?.history">
+              <strong>{{ item.fromStatus || 'START' }} → {{ item.toStatus }}</strong>
+              <span>{{ item.remarks || 'Status updated' }}</span>
+              <small>{{ item.changedBy }} · {{ item.changedAt | date:'medium' }}</small>
+            </article>
+          </div>
+        </article>
+
+        <article class="panel animated-panel" *ngIf="activeTab === 'servicing'">
+          <header class="panel__header">
+            <h2>Loan servicing and disbursement reporting</h2>
+            <div class="chip" *ngIf="selectedAccount">Account {{ selectedAccount.accountNumber }}</div>
+          </header>
+
+          <div class="split-grid">
+            <form class="form" [formGroup]="repaymentForm">
+              <div class="section-subtitle">Repayment capture</div>
+              <div class="row">
+                <label>
+                  Amount
+                  <input type="number" formControlName="amount" min="1">
+                </label>
+                <label>
+                  Payment mode
+                  <select formControlName="paymentMode">
+                    <option *ngFor="let mode of paymentModes" [value]="mode">{{ mode }}</option>
+                  </select>
+                </label>
+              </div>
+              <div class="row">
+                <label>
+                  Transaction reference
+                  <input type="text" formControlName="transactionReference">
+                </label>
+                <label>
+                  Payment date
+                  <input type="date" formControlName="paymentDate">
+                </label>
+              </div>
+              <label>
+                Notes
+                <textarea rows="3" formControlName="notes"></textarea>
+              </label>
+              <button type="button" class="primary" (click)="recordRepayment()" [disabled]="!selectedAccount || actionBusy === 'recordRepayment'">
+                {{ actionBusy === 'recordRepayment' ? 'Recording...' : 'Record repayment' }}
+              </button>
+            </form>
+
+            <div class="report">
+              <div class="section-subtitle">Disbursement report</div>
+              <form class="form" [formGroup]="reportForm">
+                <div class="row">
+                  <label>
+                    From
+                    <input type="date" formControlName="from">
+                  </label>
+                  <label>
+                    To
+                    <input type="date" formControlName="to">
+                  </label>
+                </div>
+                <div class="row">
+                  <label>
+                    Page size
+                    <input type="number" formControlName="size" min="1">
+                  </label>
+                  <div class="inline-actions align-end">
+                    <button type="button" class="ghost" (click)="loadReport()">Load</button>
+                    <button type="button" class="ghost" (click)="previousPage()">Prev</button>
+                    <button type="button" class="ghost" (click)="nextPage()">Next</button>
+                    <button type="button" class="ghost" (click)="exportCsv()" [disabled]="actionBusy === 'exportCsv'">
+                      {{ actionBusy === 'exportCsv' ? 'Exporting...' : 'Export CSV' }}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div class="report-summary" *ngIf="report">
+                <article>
+                  <span>Disbursed count</span>
+                  <strong>{{ report.disbursedCount }}</strong>
+                </article>
+                <article>
+                  <span>Total principal</span>
+                  <strong>₹{{ formatMoney(report.totalPrincipalDisbursed) }}</strong>
+                </article>
+                <article>
+                  <span>Outstanding</span>
+                  <strong>₹{{ formatMoney(report.totalOutstandingPrincipal) }}</strong>
+                </article>
               </div>
             </div>
           </div>
-        </div>
 
-        <button type="button" class="primary" (click)="createBorrower()">Create borrower</button>
-      </form>
-
-      <div class="list">
-        <article class="list-card" *ngFor="let borrower of borrowers">
-          <strong>{{ borrower.legalBusinessName }}</strong>
-          <span>{{ borrower.businessPan }} · {{ borrower.industryType }}</span>
-          <small>{{ borrower.contactPersonName }} · {{ borrower.phoneNumber }}</small>
-        </article>
-      </div>
-    </article>
-
-    <article class="panel animated-panel" *ngIf="activeTab === 'products'">
-      <header class="panel__header">
-        <h2>Loan products and rules</h2>
-        <button type="button" class="ghost" (click)="searchProducts()">Search products</button>
-      </header>
-
-      <form class="form" [formGroup]="loanProductSearchForm">
-        <div class="row">
-          <label>
-            Product name
-            <input type="text" formControlName="name" placeholder="Business Term Loan">
-          </label>
-          <label>
-            Active
-            <select formControlName="active">
-              <option value="">Any</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Amount
-            <input type="number" formControlName="amount" min="1" step="1" placeholder="2500000">
-          </label>
-          <label>
-            Max tenure months
-            <input type="number" formControlName="maxTenureMonths" min="1" step="1" placeholder="36">
-          </label>
-        </div>
-      </form>
-
-      <form class="form" [formGroup]="loanProductForm">
-        <div class="row">
-          <label>
-            Product code
-            <input type="text" formControlName="productCode" placeholder="BL-TERM-36">
-          </label>
-          <label>
-            Name
-            <input type="text" formControlName="name" placeholder="Business Term Loan">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Min amount
-            <input type="number" formControlName="minAmount" min="1" step="1">
-          </label>
-          <label>
-            Max amount
-            <input type="number" formControlName="maxAmount" min="1" step="1">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Interest rate
-            <input type="number" formControlName="interestRate" min="0.1" step="0.1">
-          </label>
-          <label>
-            Tenure months
-            <input type="number" formControlName="tenureMonths" min="1" step="1">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Eligibility criteria
-            <textarea rows="3" formControlName="eligibilityCriteria"></textarea>
-          </label>
-        </div>
-        <button type="button" class="primary" (click)="createLoanProduct()">Create product</button>
-      </form>
-
-      <form class="form" [formGroup]="ruleForm">
-        <div class="section-subtitle">Eligibility rule engine</div>
-        <div class="row">
-          <label>
-            Rule code
-            <input type="text" formControlName="ruleCode">
-          </label>
-          <label>
-            Rule type
-            <select formControlName="ruleType">
-              <option value="MIN_VALUE">MIN_VALUE</option>
-              <option value="MAX_VALUE">MAX_VALUE</option>
-              <option value="RANGE">RANGE</option>
-              <option value="TEXT_MATCH">TEXT_MATCH</option>
-            </select>
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Rule expression
-            <input type="text" formControlName="ruleExpression">
-          </label>
-          <label>
-            Active
-            <select formControlName="active">
-              <option [ngValue]="true">Yes</option>
-              <option [ngValue]="false">No</option>
-            </select>
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Min value
-            <input type="number" formControlName="minValue">
-          </label>
-          <label>
-            Max value
-            <input type="number" formControlName="maxValue">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Rule text
-            <input type="text" formControlName="ruleValueText">
-          </label>
-          <div class="spacer"></div>
-        </div>
-        <button type="button" class="primary" (click)="createRule()">Create rule</button>
-      </form>
-
-      <div class="list">
-        <article class="list-card" *ngFor="let product of loanProducts">
-          <strong>{{ product.productCode }} · {{ product.name }}</strong>
-          <span>₹{{ formatMoney(product.minAmount) }} - ₹{{ formatMoney(product.maxAmount) }} · {{ product.interestRate }}%</span>
-          <small>Tenure: {{ product.tenureMonths }} months · {{ product.active ? 'Active' : 'Inactive' }}</small>
-        </article>
-      </div>
-    </article>
-
-    <article class="panel animated-panel" *ngIf="activeTab === 'applications'">
-      <header class="panel__header">
-        <h2>Eligibility and application workflow</h2>
-        <button type="button" class="ghost" (click)="searchApplications()">Search applications</button>
-      </header>
-
-      <form class="form" [formGroup]="eligibilityForm">
-        <div class="row">
-          <label>
-            Borrower ID
-            <input type="number" formControlName="borrowerId" min="1" step="1">
-          </label>
-          <label>
-            Product ID
-            <input type="number" formControlName="loanProductId" min="1" step="1">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Requested amount
-            <input type="number" formControlName="requestedAmount" min="1" step="1">
-          </label>
-          <label>
-            Requested tenure
-            <input type="number" formControlName="requestedTenureMonths" min="1" step="1">
-          </label>
-        </div>
-        <button type="button" class="primary" (click)="evaluateEligibility()">Evaluate eligibility</button>
-      </form>
-
-      <div class="result-box" *ngIf="eligibility">
-        <strong [class.pass]="eligibility.eligible" [class.fail]="!eligibility.eligible">
-          {{ eligibility.eligible ? 'Eligible' : 'Not eligible' }}
-        </strong>
-        <p>{{ eligibility.summary }}</p>
-        <ul>
-          <li *ngFor="let rule of eligibility.ruleResults">
-            <span>{{ rule.ruleCode }}</span>
-            <span>{{ rule.passed ? 'Pass' : 'Fail' }}</span>
-            <small>{{ rule.message }}</small>
-          </li>
-        </ul>
-      </div>
-
-      <form class="form" [formGroup]="applicationForm">
-        <div class="row">
-          <label>
-            Borrower ID
-            <input type="number" formControlName="borrowerId" min="1" step="1">
-          </label>
-          <label>
-            Product ID
-            <input type="number" formControlName="loanProductId" min="1" step="1">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Requested amount
-            <input type="number" formControlName="requestedAmount" min="1" step="1">
-          </label>
-          <label>
-            Requested tenure
-            <input type="number" formControlName="requestedTenureMonths" min="1" step="1">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Purpose
-            <textarea rows="3" formControlName="purpose"></textarea>
-          </label>
-        </div>
-        <button type="button" class="primary" (click)="createApplication()">Create application</button>
-      </form>
-
-      <div class="list">
-        <article class="list-card list-card--selectable" *ngFor="let application of applications" (click)="selectApplication(application)">
-          <strong>{{ application.borrowerName }} · {{ application.loanProductCode }}</strong>
-          <span>₹{{ formatMoney(application.requestedAmount) }} · {{ application.requestedTenureMonths }} months</span>
-          <small>Status: {{ application.status }} · {{ application.eligibilitySummary }}</small>
-        </article>
-      </div>
-    </article>
-
-    <article class="panel animated-panel" *ngIf="activeTab === 'approval'">
-      <header class="panel__header">
-        <h2>Approval and disbursement</h2>
-        <div class="chip" *ngIf="selectedApplication">Selected #{{ selectedApplication.id }}</div>
-      </header>
-
-      <div class="selected" *ngIf="selectedApplication">
-        <div class="selected__header">
-          <strong>{{ selectedApplication.borrowerName }}</strong>
-          <span>{{ selectedApplication.status }}</span>
-        </div>
-        <p>{{ selectedApplication.purpose }}</p>
-        <small>{{ selectedApplication.eligibilitySummary }}</small>
-      </div>
-
-      <form class="form" [formGroup]="reviewerForm">
-        <label>
-          Reviewer username
-          <input type="text" formControlName="reviewerUsername">
-        </label>
-        <button type="button" class="secondary" (click)="assignReviewer()">Assign reviewer</button>
-      </form>
-
-      <form class="form" [formGroup]="decisionForm">
-        <div class="row">
-          <label>
-            Decision
-            <select formControlName="approved">
-              <option [ngValue]="true">Approve</option>
-              <option [ngValue]="false">Reject</option>
-            </select>
-          </label>
-          <label>
-            Remarks
-            <input type="text" formControlName="remarks">
-          </label>
-        </div>
-        <button type="button" class="secondary" (click)="submitApplication()">Submit application</button>
-        <button type="button" class="secondary" (click)="decideApplication()">Save decision</button>
-      </form>
-
-      <form class="form" [formGroup]="disbursementForm">
-        <div class="row">
-          <label>
-            Reference
-            <input type="text" formControlName="disbursementReference">
-          </label>
-          <label>
-            Disbursement date
-            <input type="date" formControlName="disbursementDate">
-          </label>
-        </div>
-        <button type="button" class="primary" (click)="disburseApplication()">Disburse selected application</button>
-      </form>
-    </article>
-
-    <article class="panel animated-panel" *ngIf="activeTab === 'servicing'">
-      <header class="panel__header">
-        <h2>Loan servicing and reports</h2>
-        <div class="chip" *ngIf="selectedAccount">Account {{ selectedAccount.accountNumber }}</div>
-      </header>
-
-      <form class="form" [formGroup]="repaymentForm">
-        <div class="row">
-          <label>
-            Amount
-            <input type="number" formControlName="amount">
-          </label>
-          <label>
-            Payment mode
-            <select formControlName="paymentMode">
-              <option *ngFor="let mode of paymentModes" [value]="mode">{{ mode }}</option>
-            </select>
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Transaction reference
-            <input type="text" formControlName="transactionReference">
-          </label>
-          <label>
-            Payment date
-            <input type="date" formControlName="paymentDate">
-          </label>
-        </div>
-        <div class="row">
-          <label>
-            Notes
-            <textarea rows="3" formControlName="notes"></textarea>
-          </label>
-        </div>
-        <button type="button" class="primary" (click)="recordRepayment()">Record repayment</button>
-      </form>
-
-      <div class="list">
-        <article class="list-card list-card--selectable" *ngFor="let account of accounts" (click)="selectAccount(account)">
-          <strong>{{ account.accountNumber }} · {{ account.borrowerName }}</strong>
-          <span>₹{{ formatMoney(account.principalAmount) }} · Outstanding ₹{{ formatMoney(account.outstandingPrincipal) }}</span>
-          <small>{{ account.status }} · Next due {{ account.nextDueDate || 'N/A' }}</small>
-        </article>
-      </div>
-
-      <div class="report">
-        <div class="section-subtitle">Disbursement report</div>
-        <form class="form" [formGroup]="reportForm">
-          <div class="row">
-            <label>
-              From
-              <input type="date" formControlName="from">
-            </label>
-            <label>
-              To
-              <input type="date" formControlName="to">
-            </label>
+          <div class="list">
+            <article
+              class="list-card list-card--selectable"
+              *ngFor="let account of accounts"
+              (click)="selectAccount(account)"
+              [class.is-selected]="selectedAccount?.id === account.id">
+              <strong>{{ account.accountNumber }} · {{ account.borrowerName }}</strong>
+              <span>₹{{ formatMoney(account.principalAmount) }} · Outstanding ₹{{ formatMoney(account.outstandingPrincipal) }}</span>
+              <small>{{ account.status }} · Next due {{ account.nextDueDate || 'N/A' }}</small>
+            </article>
           </div>
-          <div class="row">
-            <label>
-              Page size
-              <input type="number" formControlName="size" min="1" step="1">
-            </label>
-            <div class="inline-actions">
-              <button type="button" class="ghost" (click)="loadReport()">Load report</button>
-              <button type="button" class="ghost" (click)="previousPage()">Prev</button>
-              <button type="button" class="ghost" (click)="nextPage()">Next</button>
-            </div>
+
+          <div class="list" *ngIf="report?.items?.length">
+            <article class="list-card" *ngFor="let item of report?.items">
+              <strong>{{ item.accountNumber }} · {{ item.borrowerName }}</strong>
+              <span>{{ item.productCode }} · ₹{{ formatMoney(item.principalAmount) }}</span>
+              <small>{{ item.status }} · Disbursed {{ item.disbursedAt | date:'mediumDate' }}</small>
+            </article>
           </div>
-        </form>
-
-        <div class="report-summary" *ngIf="report">
-          <article>
-            <span>Disbursed count</span>
-            <strong>{{ report.disbursedCount }}</strong>
-          </article>
-          <article>
-            <span>Total principal</span>
-            <strong>₹{{ formatMoney(report.totalPrincipalDisbursed) }}</strong>
-          </article>
-          <article>
-            <span>Outstanding</span>
-            <strong>₹{{ formatMoney(report.totalOutstandingPrincipal) }}</strong>
-          </article>
-        </div>
-
-        <div class="list">
-          <article class="list-card" *ngFor="let item of report?.items ?? []">
-            <strong>{{ item.accountNumber }} · {{ item.borrowerName }}</strong>
-            <span>{{ item.productCode }} · ₹{{ formatMoney(item.principalAmount) }}</span>
-            <small>{{ item.status }} · Disbursed {{ item.disbursedAt | date:'mediumDate' }}</small>
-          </article>
-        </div>
-      </div>
-    </article>
-  </section>
-  </main>
-</div>
-
-
+        </article>
+      </section>
+    </main>
+  </div>
+</ng-template>

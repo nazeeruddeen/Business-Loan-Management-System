@@ -4,6 +4,7 @@ import com.employee.loan_system.businessloan.dto.CreateLoanProductRequest;
 import com.employee.loan_system.businessloan.dto.LoanProductResponse;
 import com.employee.loan_system.businessloan.entity.LoanProduct;
 import com.employee.loan_system.businessloan.repository.LoanProductRepository;
+import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.DuplicateResourceException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import jakarta.persistence.criteria.Predicate;
@@ -32,7 +33,7 @@ public class LoanProductService {
     @CacheEvict(value = "loanProducts", allEntries = true)
     public LoanProductResponse createProduct(CreateLoanProductRequest request) {
         if (request.getMinAmount().compareTo(request.getMaxAmount()) > 0) {
-            throw new IllegalArgumentException("Minimum amount cannot be greater than maximum amount");
+            throw new BusinessRuleException("Minimum amount cannot be greater than maximum amount");
         }
 
         String normalizedCode = request.getProductCode().trim().toUpperCase();

@@ -2,9 +2,11 @@ package com.employee.loan_system.businessloan.service;
 
 import com.employee.loan_system.businessloan.dto.ApplicationDecisionRequest;
 import com.employee.loan_system.businessloan.dto.AssignReviewerRequest;
+import com.employee.loan_system.businessloan.dto.BorrowerKycSummaryResponse;
 import com.employee.loan_system.businessloan.dto.CreateLoanApplicationRequest;
 import com.employee.loan_system.businessloan.dto.EligibilityEvaluationResponse;
 import com.employee.loan_system.businessloan.entity.ApplicationStatus;
+import com.employee.loan_system.businessloan.entity.BorrowerDocumentType;
 import com.employee.loan_system.businessloan.entity.Borrower;
 import com.employee.loan_system.businessloan.entity.LoanApplication;
 import com.employee.loan_system.businessloan.entity.LoanProduct;
@@ -15,6 +17,7 @@ import com.employee.loan_system.businessloan.repository.LoanApplicationRepositor
 import com.employee.loan_system.businessloan.repository.LoanProductRepository;
 import com.employee.loan_system.entity.AppUser;
 import com.employee.loan_system.entity.UserRole;
+import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.repository.AppUserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +36,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,6 +65,9 @@ class LoanApplicationServiceTest {
 
     @Mock
     private EligibilityService eligibilityService;
+
+    @Mock
+    private BorrowerDocumentService borrowerDocumentService;
 
     @InjectMocks
     private LoanApplicationService loanApplicationService;
@@ -92,6 +100,7 @@ class LoanApplicationServiceTest {
             return application;
         });
         when(statusHistoryRepository.findByLoanApplication_IdOrderByChangedAtAsc(11L)).thenReturn(List.of());
+        when(borrowerDocumentService.getKycSummary(any(Borrower.class))).thenReturn(kycComplete());
 
         CreateLoanApplicationRequest request = new CreateLoanApplicationRequest();
         request.setBorrowerId(1L);
@@ -136,6 +145,7 @@ class LoanApplicationServiceTest {
         when(appUserRepository.findById(99L)).thenReturn(Optional.of(reviewer));
         when(loanApplicationRepository.save(any(LoanApplication.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(statusHistoryRepository.findByLoanApplication_IdOrderByChangedAtAsc(11L)).thenReturn(List.of());
+        when(borrowerDocumentService.getKycSummary(any(Borrower.class))).thenReturn(kycComplete());
 
         AssignReviewerRequest request = new AssignReviewerRequest();
         request.setReviewerUserId(99L);
@@ -162,7 +172,79 @@ class LoanApplicationServiceTest {
         request.setRemarks("Looks good");
 
         assertThatThrownBy(() -> loanApplicationService.decide(11L, request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("under review");
+    }
+
+    @Test
+    void submitShouldRejectWhenBorrowerKycIsIncomplete() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("officer", "n/a", List.of(new SimpleGrantedAuthority("ROLE_LOAN_OFFICER"))));
+
+        Borrower borrower = new Borrower();
+        borrower.setId(1L);
+        borrower.setLegalBusinessName("Atlas Foods");
+
+        LoanProduct product = new LoanProduct();
+        product.setId(2L);
+        product.setProductCode("BL-TERM");
+
+        LoanApplication application = new LoanApplication();
+        application.setId(11L);
+        application.setBorrower(borrower);
+        application.setLoanProduct(product);
+        application.setStatus(ApplicationStatus.DRAFT);
+        application.setEligibilityPassed(true);
+
+        when(loanApplicationRepository.findById(11L)).thenReturn(Optional.of(application));
+        doThrow(new BusinessRuleException("KYC is incomplete. Missing verified documents: [PAN_CARD]"))
+                .when(borrowerDocumentService)
+                .assertKycComplete(eq(borrower));
+
+        assertThatThrownBy(() -> loanApplicationService.submit(11L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("KYC is incomplete");
+    }
+
+    @Test
+    void assignReviewerShouldRejectWhenBorrowerKycIsIncomplete() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "n/a", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+        Borrower borrower = new Borrower();
+        borrower.setId(1L);
+        borrower.setLegalBusinessName("Atlas Foods");
+
+        LoanProduct product = new LoanProduct();
+        product.setId(2L);
+        product.setProductCode("BL-TERM");
+
+        LoanApplication application = new LoanApplication();
+        application.setId(11L);
+        application.setStatus(ApplicationStatus.SUBMITTED);
+        application.setBorrower(borrower);
+        application.setLoanProduct(product);
+
+        when(loanApplicationRepository.findById(11L)).thenReturn(Optional.of(application));
+        doThrow(new BusinessRuleException("KYC is incomplete. Missing verified documents: [PAN_CARD]"))
+                .when(borrowerDocumentService)
+                .assertKycComplete(eq(borrower));
+
+        AssignReviewerRequest request = new AssignReviewerRequest();
+        request.setReviewerUserId(99L);
+
+        assertThatThrownBy(() -> loanApplicationService.assignReviewer(11L, request))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("KYC is incomplete");
+    }
+
+    private BorrowerKycSummaryResponse kycComplete() {
+        return BorrowerKycSummaryResponse.builder()
+                .kycComplete(true)
+                .requiredDocumentCount(4)
+                .verifiedDocumentCount(4)
+                .totalDocumentCount(4)
+                .missingRequiredDocuments(List.of())
+                .build();
     }
 }

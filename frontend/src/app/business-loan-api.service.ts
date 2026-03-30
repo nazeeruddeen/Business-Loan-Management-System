@@ -1,12 +1,15 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 import {
   ApplicationDecisionRequest,
   AssignReviewerRequest,
+  AuthResponse,
+  BorrowerDocumentResponse,
   BorrowerResponse,
   BusinessLoanDashboardResponse,
+  CreateBorrowerDocumentRequest,
   CreateBorrowerRequest,
   CreateEligibilityRuleRequest,
   CreateLoanApplicationRequest,
@@ -19,7 +22,12 @@ import {
   LoanAccountResponse,
   LoanApplicationResponse,
   LoanProductResponse,
-  RecordRepaymentRequest
+  LoanRepaymentTransactionResponse,
+  LoginRequest,
+  RecordRepaymentRequest,
+  UpdateBorrowerDocumentStatusRequest,
+  UserInfoResponse,
+  UserSummaryResponse
 } from './business-loan.models';
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -27,29 +35,56 @@ type QueryValue = string | number | boolean | null | undefined;
 @Injectable({ providedIn: 'root' })
 export class BusinessLoanApiService {
   private readonly baseUrl = environment.apiBaseUrl.replace(/\/$/, '');
+  private readonly serverBaseUrl = this.baseUrl.replace(/\/api\/v1$/, '');
 
   constructor(private readonly http: HttpClient) {}
 
+  login(payload: LoginRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.serverBaseUrl}/auth/login`, payload);
+  }
+
+  me(): Observable<UserInfoResponse> {
+    return this.http.get<UserInfoResponse>(`${this.serverBaseUrl}/auth/me`);
+  }
+
+  logout(refreshToken: string): Observable<void> {
+    return this.http.post<void>(`${this.serverBaseUrl}/auth/logout`, { refreshToken });
+  }
+
+  users(): Observable<UserSummaryResponse[]> {
+    return this.http.get<UserSummaryResponse[]>(`${this.serverBaseUrl}/auth/users`);
+  }
+
   dashboard(): Observable<BusinessLoanDashboardResponse> {
-    return this.http.get<BusinessLoanDashboardResponse>(this.url('/loan-accounts/dashboard')).pipe(
-      catchError(() => of(this.mockDashboard))
-    );
+    return this.http.get<BusinessLoanDashboardResponse>(this.url('/loan-accounts/dashboard'));
   }
 
   borrowers(filters: { businessPan?: string; businessName?: string } = {}): Observable<BorrowerResponse[]> {
-    return this.http.get<BorrowerResponse[]>(this.url('/borrowers'), { params: this.params(filters) }).pipe(
-      catchError(() => of(this.mockBorrowers))
-    );
+    return this.http.get<BorrowerResponse[]>(this.url('/borrowers'), { params: this.params(filters) });
   }
 
   createBorrower(payload: CreateBorrowerRequest): Observable<BorrowerResponse> {
     return this.http.post<BorrowerResponse>(this.url('/borrowers'), payload);
   }
 
+  borrowerDocuments(borrowerId: number): Observable<BorrowerDocumentResponse[]> {
+    return this.http.get<BorrowerDocumentResponse[]>(this.url(`/borrowers/${borrowerId}/documents`));
+  }
+
+  createBorrowerDocument(borrowerId: number, payload: CreateBorrowerDocumentRequest): Observable<BorrowerDocumentResponse> {
+    return this.http.post<BorrowerDocumentResponse>(this.url(`/borrowers/${borrowerId}/documents`), payload);
+  }
+
+  updateBorrowerDocumentStatus(
+    borrowerId: number,
+    documentId: number,
+    payload: UpdateBorrowerDocumentStatusRequest
+  ): Observable<BorrowerDocumentResponse> {
+    return this.http.patch<BorrowerDocumentResponse>(this.url(`/borrowers/${borrowerId}/documents/${documentId}/status`), payload);
+  }
+
   loanProducts(filters: { name?: string; active?: boolean | null; amount?: number; maxTenureMonths?: number } = {}): Observable<LoanProductResponse[]> {
-    return this.http.get<LoanProductResponse[]>(this.url('/loan-products'), { params: this.params(filters) }).pipe(
-      catchError(() => of(this.mockLoanProducts))
-    );
+    return this.http.get<LoanProductResponse[]>(this.url('/loan-products'), { params: this.params(filters) });
   }
 
   createLoanProduct(payload: CreateLoanProductRequest): Observable<LoanProductResponse> {
@@ -57,9 +92,7 @@ export class BusinessLoanApiService {
   }
 
   eligibilityRules(): Observable<EligibilityRuleResponse[]> {
-    return this.http.get<EligibilityRuleResponse[]>(this.url('/eligibility-rules')).pipe(
-      catchError(() => of(this.mockRules))
-    );
+    return this.http.get<EligibilityRuleResponse[]>(this.url('/eligibility-rules'));
   }
 
   createEligibilityRule(payload: CreateEligibilityRuleRequest): Observable<EligibilityRuleResponse> {
@@ -67,22 +100,11 @@ export class BusinessLoanApiService {
   }
 
   evaluateEligibility(payload: EvaluateEligibilityRequest): Observable<EligibilityEvaluationResponse> {
-    return this.http.post<EligibilityEvaluationResponse>(this.url('/eligibility/evaluate'), payload).pipe(
-      catchError(() => of({
-        eligible: true,
-        summary: 'Mock evaluation: borrower passes policy checks.',
-        ruleResults: [
-          { ruleCode: 'INCOME_MIN', ruleExpression: 'Monthly income above threshold', passed: true, message: 'Pass' },
-          { ruleCode: 'TENURE_MAX', ruleExpression: 'Requested tenure within policy', passed: true, message: 'Pass' }
-        ]
-      }))
-    );
+    return this.http.post<EligibilityEvaluationResponse>(this.url('/eligibility/evaluate'), payload);
   }
 
   applications(filters: { status?: string | null } = {}): Observable<LoanApplicationResponse[]> {
-    return this.http.get<LoanApplicationResponse[]>(this.url('/loan-applications'), { params: this.params(filters) }).pipe(
-      catchError(() => of(this.mockApplications))
-    );
+    return this.http.get<LoanApplicationResponse[]>(this.url('/loan-applications'), { params: this.params(filters) });
   }
 
   createLoanApplication(payload: CreateLoanApplicationRequest): Observable<LoanApplicationResponse> {
@@ -106,41 +128,31 @@ export class BusinessLoanApiService {
   }
 
   loanAccountByApplication(applicationId: number): Observable<LoanAccountResponse> {
-    return this.http.get<LoanAccountResponse>(this.url(`/loan-accounts/application/${applicationId}`)).pipe(
-      catchError(() => of(this.mockLoanAccounts[0]))
-    );
+    return this.http.get<LoanAccountResponse>(this.url(`/loan-accounts/application/${applicationId}`));
   }
 
   loanAccountByAccountNumber(accountNumber: string): Observable<LoanAccountResponse> {
-    return this.http.get<LoanAccountResponse>(this.url(`/loan-accounts/${accountNumber}`)).pipe(
-      catchError(() => of(this.mockLoanAccounts[0]))
-    );
+    return this.http.get<LoanAccountResponse>(this.url(`/loan-accounts/${accountNumber}`));
   }
 
   loanAccounts(): Observable<LoanAccountResponse[]> {
-    return this.http.get<LoanAccountResponse[]>(this.url('/loan-accounts')).pipe(
-      catchError(() => of(this.mockLoanAccounts))
-    );
+    return this.http.get<LoanAccountResponse[]>(this.url('/loan-accounts'));
   }
 
-  recordRepayment(accountId: number, payload: RecordRepaymentRequest): Observable<LoanAccountResponse> {
-    return this.http.post<LoanAccountResponse>(this.url(`/loan-accounts/${accountId}/repayments`), payload);
+  recordRepayment(accountId: number, payload: RecordRepaymentRequest): Observable<LoanRepaymentTransactionResponse> {
+    return this.http.post<LoanRepaymentTransactionResponse>(this.url(`/loan-accounts/${accountId}/repayments`), payload);
   }
 
   report(filters: { from?: string; to?: string } = {}, page = 0, size = 8): Observable<DisbursementReportResponse> {
     const params = this.params({ ...filters, page, size });
-    return this.http.get<DisbursementReportResponse>(this.url('/reports/disbursements'), { params }).pipe(
-      catchError(() => of(this.mockReport))
-    );
+    return this.http.get<DisbursementReportResponse>(this.url('/reports/disbursements'), { params });
   }
 
-  exportDisbursements(filters: { from?: string; to?: string } = {}): Observable<string> {
+  exportDisbursements(filters: { from?: string; to?: string } = {}): Observable<Blob> {
     return this.http.get(this.url('/reports/disbursements/export'), {
       params: this.params(filters),
-      responseType: 'text'
-    }).pipe(
-      catchError(() => of(this.mockDisbursementCsv))
-    );
+      responseType: 'blob'
+    });
   }
 
   private url(path: string): string {
@@ -157,43 +169,4 @@ export class BusinessLoanApiService {
     }
     return params;
   }
-
-  private readonly mockBorrowers: BorrowerResponse[] = [];
-
-  private readonly mockLoanProducts: LoanProductResponse[] = [];
-
-  private readonly mockRules: EligibilityRuleResponse[] = [];
-
-  private readonly mockApplications: LoanApplicationResponse[] = [];
-
-  private readonly mockLoanAccounts: LoanAccountResponse[] = [];
-
-  private readonly mockDashboard: BusinessLoanDashboardResponse = {
-    totalLoanApplications: 0,
-    approvedLoanApplications: 0,
-    disbursedLoanAccounts: 0,
-    activeLoanAccounts: 0,
-    overdueInstallments: 0,
-    totalPrincipalDisbursed: 0,
-    totalOutstandingPrincipal: 0,
-    totalRepaidAmount: 0
-  };
-
-  private readonly mockReport = {
-    fromDate: undefined,
-    toDate: undefined,
-    page: 0,
-    size: 8,
-    totalElements: 0,
-    totalPages: 0,
-    disbursedCount: 0,
-    totalPrincipalDisbursed: 0,
-    totalOutstandingPrincipal: 0,
-    items: []
-  } as DisbursementReportResponse;
-
-  private readonly mockDisbursementCsv = [
-    'accountNumber,applicationId,borrowerName,productCode,principalAmount,outstandingPrincipal,status',
-    ''
-  ].join('\n');
 }

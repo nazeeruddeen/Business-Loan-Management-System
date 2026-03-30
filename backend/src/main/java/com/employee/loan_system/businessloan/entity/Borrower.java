@@ -63,6 +63,9 @@ public class Borrower {
     @OneToMany(mappedBy = "borrower", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<BorrowerAddress> addresses = new ArrayList<>();
 
+    @OneToMany(mappedBy = "borrower", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<BorrowerDocument> documents = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -74,5 +77,10 @@ public class Borrower {
     public void addAddress(BorrowerAddress address) {
         address.setBorrower(this);
         addresses.add(address);
+    }
+
+    public void addDocument(BorrowerDocument document) {
+        document.setBorrower(this);
+        documents.add(document);
     }
 }

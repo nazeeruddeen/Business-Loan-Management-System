@@ -3,6 +3,7 @@ package com.employee.loan_system.businessloan.service;
 import com.employee.loan_system.businessloan.dto.ApplicationDecisionRequest;
 import com.employee.loan_system.businessloan.dto.ApplicationStatusHistoryResponse;
 import com.employee.loan_system.businessloan.dto.AssignReviewerRequest;
+import com.employee.loan_system.businessloan.dto.BorrowerKycSummaryResponse;
 import com.employee.loan_system.businessloan.dto.CreateLoanApplicationRequest;
 import com.employee.loan_system.businessloan.dto.DisburseLoanRequest;
 import com.employee.loan_system.businessloan.dto.EligibilityEvaluationResponse;
@@ -21,6 +22,7 @@ import com.employee.loan_system.businessloan.repository.LoanApplicationRepositor
 import com.employee.loan_system.businessloan.repository.LoanProductRepository;
 import com.employee.loan_system.entity.AppUser;
 import com.employee.loan_system.entity.UserRole;
+import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
 import com.employee.loan_system.repository.AppUserRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,6 +48,7 @@ public class LoanApplicationService {
     private final ApplicationStatusHistoryRepository statusHistoryRepository;
     private final LoanAccountRepository loanAccountRepository;
     private final EligibilityService eligibilityService;
+    private final BorrowerDocumentService borrowerDocumentService;
 
     public LoanApplicationService(
             LoanApplicationRepository loanApplicationRepository,
@@ -54,7 +57,8 @@ public class LoanApplicationService {
             AppUserRepository appUserRepository,
             ApplicationStatusHistoryRepository statusHistoryRepository,
             LoanAccountRepository loanAccountRepository,
-            EligibilityService eligibilityService) {
+            EligibilityService eligibilityService,
+            BorrowerDocumentService borrowerDocumentService) {
         this.loanApplicationRepository = loanApplicationRepository;
         this.borrowerRepository = borrowerRepository;
         this.loanProductRepository = loanProductRepository;
@@ -62,6 +66,7 @@ public class LoanApplicationService {
         this.statusHistoryRepository = statusHistoryRepository;
         this.loanAccountRepository = loanAccountRepository;
         this.eligibilityService = eligibilityService;
+        this.borrowerDocumentService = borrowerDocumentService;
     }
 
     @Transactional
@@ -99,8 +104,9 @@ public class LoanApplicationService {
         LoanApplication application = findApplication(applicationId);
         ensureStatus(application, ApplicationStatus.DRAFT, "Only draft applications can be submitted");
         if (!application.isEligibilityPassed()) {
-            throw new IllegalArgumentException("Application cannot be submitted because eligibility checks failed");
+            throw new BusinessRuleException("Application cannot be submitted because eligibility checks failed");
         }
+        borrowerDocumentService.assertKycComplete(application.getBorrower());
 
         ApplicationStatus previousStatus = application.getStatus();
         application.setStatus(ApplicationStatus.SUBMITTED);
@@ -115,14 +121,15 @@ public class LoanApplicationService {
     public LoanApplicationResponse assignReviewer(Long applicationId, AssignReviewerRequest request) {
         LoanApplication application = findApplication(applicationId);
         ensureStatus(application, ApplicationStatus.SUBMITTED, "Reviewer can only be assigned to submitted applications");
+        borrowerDocumentService.assertKycComplete(application.getBorrower());
 
         AppUser reviewer = appUserRepository.findById(request.getReviewerUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Reviewer not found with id: " + request.getReviewerUserId()));
         if (reviewer.getRole() != UserRole.REVIEWER) {
-            throw new IllegalArgumentException("Assigned user must have REVIEWER role");
+            throw new BusinessRuleException("Assigned user must have REVIEWER role");
         }
         if (!reviewer.isActive()) {
-            throw new IllegalArgumentException("Assigned reviewer is inactive");
+            throw new BusinessRuleException("Assigned reviewer is inactive");
         }
 
         ApplicationStatus previousStatus = application.getStatus();
@@ -140,7 +147,7 @@ public class LoanApplicationService {
         ensureStatus(application, ApplicationStatus.UNDER_REVIEW, "Only applications under review can be decided");
 
         if (request.getDecisionStatus() != ApplicationStatus.APPROVED && request.getDecisionStatus() != ApplicationStatus.REJECTED) {
-            throw new IllegalArgumentException("Decision must be APPROVED or REJECTED");
+            throw new BusinessRuleException("Decision must be APPROVED or REJECTED");
         }
 
         String actor = currentActor();
@@ -148,7 +155,7 @@ public class LoanApplicationService {
         boolean admin = authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
         if (!admin && application.getReviewer() != null && !application.getReviewer().getUsername().equalsIgnoreCase(actor)) {
-            throw new IllegalArgumentException("Only the assigned reviewer can decide this application");
+            throw new BusinessRuleException("Only the assigned reviewer can decide this application");
         }
 
         ApplicationStatus previousStatus = application.getStatus();
@@ -167,7 +174,7 @@ public class LoanApplicationService {
         ensureStatus(application, ApplicationStatus.APPROVED, "Only approved applications can be disbursed");
 
         if (loanAccountRepository.findByLoanApplication_Id(applicationId).isPresent()) {
-            throw new IllegalArgumentException("Loan account already exists for application id: " + applicationId);
+            throw new BusinessRuleException("Loan account already exists for application id: " + applicationId);
         }
 
         ApplicationStatus previousStatus = application.getStatus();
@@ -221,7 +228,7 @@ public class LoanApplicationService {
 
     private void ensureStatus(LoanApplication application, ApplicationStatus expected, String message) {
         if (application.getStatus() != expected) {
-            throw new IllegalArgumentException(message);
+            throw new BusinessRuleException(message);
         }
     }
 
@@ -244,6 +251,7 @@ public class LoanApplicationService {
     }
 
     private LoanApplicationResponse toResponse(LoanApplication application) {
+        BorrowerKycSummaryResponse kycSummary = borrowerDocumentService.getKycSummary(application.getBorrower());
         List<ApplicationStatusHistoryResponse> history = statusHistoryRepository
                 .findByLoanApplication_IdOrderByChangedAtAsc(application.getId()).stream()
                 .map(entry -> ApplicationStatusHistoryResponse.builder()
@@ -268,6 +276,8 @@ public class LoanApplicationService {
                 .eligibilityPassed(application.isEligibilityPassed())
                 .eligibilitySummary(application.getEligibilitySummary())
                 .reviewerUsername(application.getReviewer() == null ? null : application.getReviewer().getUsername())
+                .borrowerKycComplete(kycSummary.kycComplete())
+                .missingRequiredDocuments(kycSummary.missingRequiredDocuments())
                 .submittedAt(application.getSubmittedAt())
                 .decisionedAt(application.getDecisionedAt())
                 .disbursedAt(application.getDisbursedAt())

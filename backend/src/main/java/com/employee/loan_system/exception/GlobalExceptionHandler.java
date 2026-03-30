@@ -1,5 +1,6 @@
 package com.employee.loan_system.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -10,16 +11,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
-        Map<String, Object> error = baseError(HttpStatus.BAD_REQUEST, "Validation failed");
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
+        Map<String, Object> error = baseError(HttpStatus.BAD_REQUEST, "Validation failed", request.getRequestURI());
         Map<String, String> fieldErrors = new LinkedHashMap<>();
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             fieldErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
@@ -29,46 +31,66 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DuplicateResourceException.class)
-    public ResponseEntity<Map<String, Object>> handleDuplicateResourceException(DuplicateResourceException ex) {
-        return new ResponseEntity<>(baseError(HttpStatus.CONFLICT, ex.getMessage()), HttpStatus.CONFLICT);
+    public ResponseEntity<Map<String, Object>> handleDuplicateResourceException(
+            DuplicateResourceException ex,
+            HttpServletRequest request) {
+        return new ResponseEntity<>(baseError(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI()), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        return new ResponseEntity<>(baseError(HttpStatus.NOT_FOUND, ex.getMessage()), HttpStatus.NOT_FOUND);
+    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+            ResourceNotFoundException ex,
+            HttpServletRequest request) {
+        return new ResponseEntity<>(baseError(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI()), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessRuleException(
+            BusinessRuleException ex,
+            HttpServletRequest request) {
+        return new ResponseEntity<>(baseError(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request.getRequestURI()),
+                HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return new ResponseEntity<>(baseError(HttpStatus.BAD_REQUEST, ex.getMessage()), HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+        return new ResponseEntity<>(baseError(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI()), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(
+            AccessDeniedException ex,
+            HttpServletRequest request) {
         return new ResponseEntity<>(
-                baseError(HttpStatus.FORBIDDEN, "You do not have permission to perform this action"),
+                baseError(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request.getRequestURI()),
                 HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleMaxSizeException(MaxUploadSizeExceededException ex) {
+    public ResponseEntity<Map<String, Object>> handleMaxSizeException(
+            MaxUploadSizeExceededException ex,
+            HttpServletRequest request) {
         return new ResponseEntity<>(
-                baseError(HttpStatus.PAYLOAD_TOO_LARGE, "File too large! Maximum size is 50MB"),
+                baseError(HttpStatus.PAYLOAD_TOO_LARGE, "File too large! Maximum size is 50MB", request.getRequestURI()),
                 HttpStatus.PAYLOAD_TOO_LARGE);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, HttpServletRequest request) {
         return new ResponseEntity<>(
-                baseError(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
+                baseError(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request.getRequestURI()),
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    private Map<String, Object> baseError(HttpStatus status, String message) {
-        Map<String, Object> error = new HashMap<>();
+    private Map<String, Object> baseError(HttpStatus status, String message, String path) {
+        Map<String, Object> error = new LinkedHashMap<>();
         error.put("timestamp", LocalDateTime.now());
-        error.put("message", message);
         error.put("status", status.value());
+        error.put("error", status.getReasonPhrase());
+        error.put("message", message);
+        error.put("path", path);
         return error;
     }
 }

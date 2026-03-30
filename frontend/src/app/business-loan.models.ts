@@ -3,6 +3,50 @@ export type ApplicationStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROV
 export type LoanAccountStatus = 'ACTIVE' | 'CLOSED' | 'DEFAULTED';
 export type PaymentMode = 'CASH' | 'UPI' | 'NEFT' | 'RTGS' | 'CHEQUE' | 'CARD' | 'BANK_TRANSFER';
 export type EligibilityRuleType = 'MIN_VALUE' | 'MAX_VALUE' | 'RANGE' | 'TEXT_MATCH';
+export type BorrowerDocumentType =
+  | 'GST_CERTIFICATE'
+  | 'PAN_CARD'
+  | 'BUSINESS_REGISTRATION'
+  | 'BANK_STATEMENT'
+  | 'ITR'
+  | 'ADDRESS_PROOF'
+  | 'OTHER';
+export type BorrowerDocumentStatus = 'PENDING' | 'UPLOADED' | 'VERIFIED' | 'REJECTED';
+export type UserRole = 'ADMIN' | 'LOAN_OFFICER' | 'REVIEWER' | 'BORROWER';
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  username: string;
+  role: UserRole;
+}
+
+export interface UserInfoResponse {
+  username: string;
+  role: UserRole;
+}
+
+export interface UserSummaryResponse {
+  id: number;
+  username: string;
+  role: UserRole;
+  active: boolean;
+}
+
+export interface ApiErrorResponse {
+  timestamp?: string;
+  status?: number;
+  error?: string;
+  message?: string;
+  path?: string;
+}
 
 export interface BorrowerAddressRequest {
   addressType: AddressType;
@@ -38,6 +82,40 @@ export interface BorrowerAddressResponse {
   country: string;
 }
 
+export interface CreateBorrowerDocumentRequest {
+  documentType: BorrowerDocumentType;
+  fileName: string;
+  fileReference: string;
+  remarks?: string;
+}
+
+export interface UpdateBorrowerDocumentStatusRequest {
+  documentStatus: BorrowerDocumentStatus;
+  remarks?: string;
+}
+
+export interface BorrowerDocumentResponse {
+  id: number;
+  documentType: BorrowerDocumentType;
+  documentStatus: BorrowerDocumentStatus;
+  fileName: string;
+  fileReference: string;
+  uploadedBy?: string;
+  uploadedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  remarks?: string;
+  requiredDocument: boolean;
+}
+
+export interface BorrowerKycSummaryResponse {
+  kycComplete: boolean;
+  requiredDocumentCount: number;
+  verifiedDocumentCount: number;
+  totalDocumentCount: number;
+  missingRequiredDocuments: BorrowerDocumentType[];
+}
+
 export interface BorrowerResponse {
   id: number;
   legalBusinessName: string;
@@ -51,6 +129,8 @@ export interface BorrowerResponse {
   monthlyIncome: number;
   createdAt: string;
   addresses: BorrowerAddressResponse[];
+  documents: BorrowerDocumentResponse[];
+  kycSummary: BorrowerKycSummaryResponse;
 }
 
 export interface CreateLoanProductRequest {
@@ -86,12 +166,12 @@ export interface CreateLoanApplicationRequest {
 }
 
 export interface AssignReviewerRequest {
-  reviewerUsername: string;
+  reviewerUserId: number;
 }
 
 export interface ApplicationDecisionRequest {
-  approved: boolean;
-  remarks?: string;
+  decisionStatus: Extract<ApplicationStatus, 'APPROVED' | 'REJECTED'>;
+  remarks: string;
 }
 
 export interface DisburseLoanRequest {
@@ -149,7 +229,7 @@ export interface EligibilityRuleResponse {
 }
 
 export interface ApplicationStatusHistoryResponse {
-  fromStatus: ApplicationStatus;
+  fromStatus: ApplicationStatus | null;
   toStatus: ApplicationStatus;
   remarks?: string;
   changedBy?: string;
@@ -169,6 +249,8 @@ export interface LoanApplicationResponse {
   eligibilityPassed: boolean;
   eligibilitySummary: string;
   reviewerUsername?: string;
+  borrowerKycComplete: boolean;
+  missingRequiredDocuments: BorrowerDocumentType[];
   submittedAt?: string;
   decisionedAt?: string;
   disbursedAt?: string;
@@ -256,4 +338,3 @@ export interface DisbursementReportResponse {
   totalOutstandingPrincipal: number;
   items: DisbursementReportItem[];
 }
-

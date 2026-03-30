@@ -1,7 +1,9 @@
 package com.employee.loan_system.businessloan.service;
 
 import com.employee.loan_system.businessloan.dto.BorrowerAddressResponse;
+import com.employee.loan_system.businessloan.dto.BorrowerDocumentResponse;
 import com.employee.loan_system.businessloan.dto.BorrowerResponse;
+import com.employee.loan_system.businessloan.dto.BorrowerKycSummaryResponse;
 import com.employee.loan_system.businessloan.dto.CreateBorrowerRequest;
 import com.employee.loan_system.businessloan.entity.Borrower;
 import com.employee.loan_system.businessloan.entity.BorrowerAddress;
@@ -18,9 +20,13 @@ import java.util.List;
 public class BorrowerService {
 
     private final BorrowerRepository borrowerRepository;
+    private final BorrowerDocumentService borrowerDocumentService;
 
-    public BorrowerService(BorrowerRepository borrowerRepository) {
+    public BorrowerService(
+            BorrowerRepository borrowerRepository,
+            BorrowerDocumentService borrowerDocumentService) {
         this.borrowerRepository = borrowerRepository;
+        this.borrowerDocumentService = borrowerDocumentService;
     }
 
     @Transactional
@@ -84,6 +90,35 @@ public class BorrowerService {
     }
 
     private BorrowerResponse toResponse(Borrower borrower) {
+        BorrowerKycSummaryResponse kycSummary = borrowerDocumentService.getKycSummary(borrower);
+        List<BorrowerDocumentResponse> documents = borrower.getDocuments().stream()
+                .sorted((left, right) -> {
+                    if (left.getUploadedAt() == null && right.getUploadedAt() == null) {
+                        return 0;
+                    }
+                    if (left.getUploadedAt() == null) {
+                        return 1;
+                    }
+                    if (right.getUploadedAt() == null) {
+                        return -1;
+                    }
+                    return right.getUploadedAt().compareTo(left.getUploadedAt());
+                })
+                .map(document -> BorrowerDocumentResponse.builder()
+                        .id(document.getId())
+                        .documentType(document.getDocumentType())
+                        .documentStatus(document.getDocumentStatus())
+                        .fileName(document.getFileName())
+                        .fileReference(document.getFileReference())
+                        .uploadedBy(document.getUploadedBy())
+                        .uploadedAt(document.getUploadedAt())
+                        .reviewedBy(document.getReviewedBy())
+                        .reviewedAt(document.getReviewedAt())
+                        .remarks(document.getRemarks())
+                        .requiredDocument(borrowerDocumentService.isRequiredDocument(borrower, document.getDocumentType()))
+                        .build())
+                .toList();
+
         return BorrowerResponse.builder()
                 .id(borrower.getId())
                 .legalBusinessName(borrower.getLegalBusinessName())
@@ -108,6 +143,8 @@ public class BorrowerService {
                                 .country(address.getCountry())
                                 .build())
                         .toList())
+                .documents(documents)
+                .kycSummary(kycSummary)
                 .build();
     }
 }

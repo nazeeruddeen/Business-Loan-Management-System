@@ -1,26 +1,24 @@
 # Business Loan Management System
 
-This workspace is the implementation folder for the resume project:
+Product identity:
 
-- Business Loan Management System
+- flagship enterprise lending application in the portfolio
 
-Starting point:
+Implemented scope:
 
-- Copied from the original loan-management scaffold to reuse authentication, CRUD, file-processing, and deployment foundations.
+- borrower onboarding with address capture
+- borrower KYC/document metadata workflow
+- KYC completeness visibility and submit/reviewer guards
+- business loan product management
+- eligibility evaluation and application workflow
+- reviewer routing, approval, rejection, and disbursement handling
+- repayment servicing and installment tracking
+- dashboard KPIs and disbursement reporting
+- JWT-secured Angular operator console
+- Docker, Jenkins, and Kubernetes delivery assets
 
-Planned scope:
+Position in portfolio:
 
-- Borrower onboarding
-- Business profile and address management
-- Loan product details
-- Eligibility rules engine
-- Loan review and approval workflow
-- Repayment schedule and transaction tracking
-- Reporting/dashboard APIs
-- Angular dashboard shell for demo and interview walkthroughs
-- Docker/Jenkins/Kubernetes deployment story
-
-Notes:
-
-- Keep this folder independent from the original scaffold and the other project folders.
-- All project-specific refactoring should happen here.
+- this is the strongest full-stack lending system in the portfolio
+- it demonstrates the cleanest end-to-end Spring Boot + Angular + delivery story
+- it is the best project to discuss layered architecture, workflow control, KYC gating, and repayment servicing

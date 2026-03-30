@@ -1,14 +1,23 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Observable, forkJoin, of } from 'rxjs';
+import { AuthSessionService } from './auth-session.service';
 import { BusinessLoanApiService } from './business-loan-api.service';
 import {
+  ApiErrorResponse,
   ApplicationDecisionRequest,
-  AssignReviewerRequest,
   ApplicationStatus,
+  AssignReviewerRequest,
+  AuthResponse,
   BorrowerAddressRequest,
+  BorrowerDocumentResponse,
+  BorrowerDocumentStatus,
+  BorrowerDocumentType,
   BorrowerResponse,
   BusinessLoanDashboardResponse,
+  CreateBorrowerDocumentRequest,
   CreateBorrowerRequest,
   CreateEligibilityRuleRequest,
   CreateLoanApplicationRequest,
@@ -21,11 +30,16 @@ import {
   LoanAccountResponse,
   LoanApplicationResponse,
   LoanProductResponse,
+  LoginRequest,
   PaymentMode,
-  RecordRepaymentRequest
+  RecordRepaymentRequest,
+  UpdateBorrowerDocumentStatusRequest,
+  UserInfoResponse,
+  UserSummaryResponse
 } from './business-loan.models';
 
 type NoticeKind = 'info' | 'success' | 'warning' | 'danger';
+type AppTab = 'dashboard' | 'borrowers' | 'products' | 'applications' | 'approval' | 'servicing';
 
 @Component({
   selector: 'app-root',
@@ -40,9 +54,27 @@ export class AppComponent implements OnInit {
   readonly addressTypes: BorrowerAddressRequest['addressType'][] = ['REGISTERED', 'OPERATIONAL', 'CORRESPONDENCE'];
   readonly paymentModes: PaymentMode[] = ['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CARD', 'BANK_TRANSFER'];
   readonly applicationStatuses: ApplicationStatus[] = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'DISBURSED'];
+  readonly decisionStatuses: Array<'APPROVED' | 'REJECTED'> = ['APPROVED', 'REJECTED'];
+  readonly documentTypes: BorrowerDocumentType[] = [
+    'PAN_CARD',
+    'BUSINESS_REGISTRATION',
+    'BANK_STATEMENT',
+    'GST_CERTIFICATE',
+    'ITR',
+    'ADDRESS_PROOF',
+    'OTHER'
+  ];
 
-  loading = false;
-  notice: { kind: NoticeKind; text: string } = { kind: 'info', text: 'Ready' };
+  activeTab: AppTab = 'dashboard';
+  bootstrapping = false;
+  pageBusy = false;
+  actionBusy: string | null = null;
+  notice: { kind: NoticeKind; text: string } = { kind: 'info', text: 'Sign in to load the live business lending workspace.' };
+
+  currentUser: UserInfoResponse | null = null;
+  authResponse: AuthResponse | null = null;
+  reviewers: UserSummaryResponse[] = [];
+
   summary: BusinessLoanDashboardResponse = {
     totalLoanApplications: 0,
     approvedLoanApplications: 0,
@@ -55,21 +87,22 @@ export class AppComponent implements OnInit {
   };
 
   borrowers: BorrowerResponse[] = [];
+  borrowerDocuments: BorrowerDocumentResponse[] = [];
   loanProducts: LoanProductResponse[] = [];
   applications: LoanApplicationResponse[] = [];
   accounts: LoanAccountResponse[] = [];
   rules: EligibilityRuleResponse[] = [];
   report: DisbursementReportResponse | null = null;
   eligibility: EligibilityEvaluationResponse | null = null;
+  selectedBorrower: BorrowerResponse | null = null;
   selectedApplication: LoanApplicationResponse | null = null;
   selectedAccount: LoanAccountResponse | null = null;
   reportPage = 0;
 
-  activeTab: string = 'dashboard';
-
-  setTab(tab: string): void {
-    this.activeTab = tab;
-  }
+  authForm = this.fb.group<any>({
+    username: ['admin', [Validators.required]],
+    password: ['Admin@123', [Validators.required]]
+  });
 
   borrowerSearchForm = this.fb.group<any>({
     businessPan: [''],
@@ -89,6 +122,17 @@ export class AppComponent implements OnInit {
     addresses: this.fb.array([this.createAddressGroup('REGISTERED')])
   });
 
+  documentForm = this.fb.group<any>({
+    documentType: ['PAN_CARD', [Validators.required]],
+    fileName: ['', [Validators.required, Validators.maxLength(180)]],
+    fileReference: ['', [Validators.required, Validators.maxLength(255)]],
+    remarks: ['']
+  });
+
+  documentReviewForm = this.fb.group<any>({
+    remarks: ['']
+  });
+
   loanProductSearchForm = this.fb.group<any>({
     name: [''],
     active: [''],
@@ -101,7 +145,7 @@ export class AppComponent implements OnInit {
     name: ['', [Validators.required, Validators.maxLength(120)]],
     minAmount: [null, [Validators.required, Validators.min(1)]],
     maxAmount: [null, [Validators.required, Validators.min(1)]],
-    interestRate: [null, [Validators.required, Validators.min(1)]],
+    interestRate: [null, [Validators.required, Validators.min(0.1)]],
     tenureMonths: [36, [Validators.required, Validators.min(1)]],
     eligibilityCriteria: [''],
     active: [true]
@@ -120,12 +164,12 @@ export class AppComponent implements OnInit {
   });
 
   reviewerForm = this.fb.group<any>({
-    reviewerUsername: ['', [Validators.required]]
+    reviewerUserId: [null, [Validators.required]]
   });
 
   decisionForm = this.fb.group<any>({
-    approved: [true],
-    remarks: ['']
+    decisionStatus: ['APPROVED', [Validators.required]],
+    remarks: ['', [Validators.required, Validators.maxLength(250)]]
   });
 
   disbursementForm = this.fb.group<any>({
@@ -153,7 +197,7 @@ export class AppComponent implements OnInit {
   repaymentForm = this.fb.group<any>({
     amount: [null, [Validators.required, Validators.min(1)]],
     paymentMode: ['UPI', [Validators.required]],
-    transactionReference: ['TXN-001', [Validators.required]],
+    transactionReference: ['', [Validators.required]],
     paymentDate: [this.today(), [Validators.required]],
     notes: ['']
   });
@@ -164,41 +208,176 @@ export class AppComponent implements OnInit {
     size: [8]
   });
 
-  constructor(private readonly fb: FormBuilder, private readonly api: BusinessLoanApiService) {}
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly api: BusinessLoanApiService,
+    private readonly authSession: AuthSessionService
+  ) {}
 
   ngOnInit(): void {
-    this.refreshAll();
+    if (this.authSession.isAuthenticated) {
+      this.restoreSession();
+    }
   }
 
   get addressArray(): FormArray {
     return this.borrowerForm.get('addresses') as FormArray;
   }
 
-  refreshAll(): void {
-    this.loading = true;
-    this.notice = { kind: 'info', text: 'Refreshing business loan data' };
-    this.api.dashboard().subscribe((summary) => (this.summary = summary));
-    this.api.borrowers(this.borrowerSearchForm.getRawValue()).subscribe((items) => {
-      this.borrowers = items;
-    });
-    this.api.loanProducts(this.productFilters()).subscribe((items) => {
-      this.loanProducts = items;
-    });
-    this.api.applications(this.applicationFilters()).subscribe((items) => {
-      this.applications = items;
-      if (items.length && !this.selectedApplication) {
-        this.selectApplication(items[0]);
+  get isAuthenticated(): boolean {
+    return this.authSession.isAuthenticated;
+  }
+
+  get reportPageSize(): number {
+    const size = Number(this.reportForm.get('size')?.value ?? 8);
+    return Number.isFinite(size) && size > 0 ? size : 8;
+  }
+
+  setTab(tab: AppTab): void {
+    this.activeTab = tab;
+  }
+
+  login(): void {
+    if (this.authForm.invalid) {
+      this.touch(this.authForm);
+      this.notice = { kind: 'warning', text: 'Enter username and password to sign in.' };
+      return;
+    }
+
+    this.actionBusy = 'login';
+    const payload = this.authForm.getRawValue() as unknown as LoginRequest;
+    this.api.login(payload).subscribe({
+      next: (response) => {
+        this.authSession.setSession(response);
+        this.authResponse = response;
+        this.currentUser = { username: response.username, role: response.role };
+        this.notice = { kind: 'success', text: `Signed in as ${response.username}. Loading live lending data.` };
+        this.actionBusy = null;
+        this.refreshAll(true);
+      },
+      error: (error) => {
+        this.actionBusy = null;
+        this.handleError(error, 'Unable to sign in');
       }
     });
-    this.api.loanAccounts().subscribe((items) => {
-      this.accounts = items;
-      if (items.length && !this.selectedAccount) {
-        this.selectAccount(items[0]);
+  }
+
+  logout(): void {
+    const refreshToken = this.authSession.session?.refreshToken;
+    this.actionBusy = 'logout';
+    const request = refreshToken ? this.api.logout(refreshToken) : of(void 0);
+    request.subscribe({
+      next: () => this.clearSession('Signed out from the business lending workspace.'),
+      error: () => this.clearSession('Session cleared locally after logout attempt.')
+    });
+  }
+
+  refreshAll(resetSelections = false): void {
+    if (!this.isAuthenticated) {
+      return;
+    }
+
+    this.pageBusy = true;
+    this.notice = { kind: 'info', text: 'Refreshing dashboard, KYC queue, workflow states, and reports.' };
+
+    const reviewers$ = this.currentUser?.role === 'ADMIN' ? this.api.users() : of([] as UserSummaryResponse[]);
+
+    forkJoin({
+      me: this.api.me(),
+      summary: this.api.dashboard(),
+      borrowers: this.api.borrowers(this.borrowerFilters()),
+      products: this.api.loanProducts(this.productFilters()),
+      applications: this.api.applications(this.applicationFilters()),
+      accounts: this.api.loanAccounts(),
+      rules: this.api.eligibilityRules(),
+      reviewers: reviewers$,
+      report: this.api.report(this.reportFilters(), this.reportPage, this.reportPageSize)
+    }).subscribe({
+      next: ({ me, summary, borrowers, products, applications, accounts, rules, reviewers, report }) => {
+        this.currentUser = me;
+        this.authSession.setUserInfo(me);
+        this.summary = summary;
+        this.borrowers = borrowers;
+        this.loanProducts = products;
+        this.applications = applications;
+        this.accounts = accounts;
+        this.rules = rules;
+        this.reviewers = reviewers.filter((user) => user.role === 'REVIEWER' && user.active);
+        this.report = report;
+
+        const borrowerId = resetSelections ? borrowers[0]?.id : this.selectedBorrower?.id ?? borrowers[0]?.id;
+        const applicationId = resetSelections ? applications[0]?.id : this.selectedApplication?.id ?? applications[0]?.id;
+        const accountId = resetSelections ? accounts[0]?.id : this.selectedAccount?.id ?? accounts[0]?.id;
+
+        this.selectedBorrower = borrowers.find((item) => item.id === borrowerId) ?? borrowers[0] ?? null;
+        this.selectedApplication = applications.find((item) => item.id === applicationId) ?? applications[0] ?? null;
+        this.selectedAccount = accounts.find((item) => item.id === accountId) ?? accounts[0] ?? null;
+
+        if (this.selectedBorrower) {
+          this.loadBorrowerDocuments(this.selectedBorrower.id);
+          this.applicationForm.patchValue({ borrowerId: this.selectedBorrower.id });
+          this.eligibilityForm.patchValue({ borrowerId: this.selectedBorrower.id });
+        } else {
+          this.borrowerDocuments = [];
+        }
+
+        if (this.selectedApplication) {
+          this.patchApplicationForms(this.selectedApplication);
+        }
+
+        if (this.selectedAccount) {
+          this.patchRepaymentForm(this.selectedAccount);
+        }
+
+        this.pageBusy = false;
+        this.notice = { kind: 'success', text: 'Live business lending data refreshed successfully.' };
+      },
+      error: (error) => {
+        this.pageBusy = false;
+        this.handleError(error, 'Unable to refresh the business lending workspace');
       }
     });
-    this.api.eligibilityRules().subscribe((items) => (this.rules = items));
-    this.loadReport();
-    this.loading = false;
+  }
+
+  searchBorrowers(): void {
+    this.api.borrowers(this.borrowerFilters()).subscribe({
+      next: (borrowers) => {
+        this.borrowers = borrowers;
+        if (borrowers.length) {
+          this.selectBorrower(borrowers[0]);
+        } else {
+          this.selectedBorrower = null;
+          this.borrowerDocuments = [];
+        }
+        this.notice = { kind: 'info', text: `Loaded ${borrowers.length} borrower record(s).` };
+      },
+      error: (error) => this.handleError(error, 'Unable to load borrowers')
+    });
+  }
+
+  searchProducts(): void {
+    this.api.loanProducts(this.productFilters()).subscribe({
+      next: (products) => {
+        this.loanProducts = products;
+        this.notice = { kind: 'info', text: `Loaded ${products.length} product record(s).` };
+      },
+      error: (error) => this.handleError(error, 'Unable to load loan products')
+    });
+  }
+
+  searchApplications(): void {
+    this.api.applications(this.applicationFilters()).subscribe({
+      next: (applications) => {
+        this.applications = applications;
+        if (applications.length) {
+          this.selectApplication(applications[0]);
+        } else {
+          this.selectedApplication = null;
+        }
+        this.notice = { kind: 'info', text: `Loaded ${applications.length} application record(s).` };
+      },
+      error: (error) => this.handleError(error, 'Unable to load applications')
+    });
   }
 
   addAddress(): void {
@@ -214,199 +393,301 @@ export class AppComponent implements OnInit {
   createBorrower(): void {
     if (this.borrowerForm.invalid) {
       this.touch(this.borrowerForm);
-      this.warn('Borrower form has validation errors');
+      this.notice = { kind: 'warning', text: 'Borrower form has validation errors.' };
       return;
     }
-    const payload = this.borrowerForm.getRawValue() as unknown as CreateBorrowerRequest;
-    this.api.createBorrower(payload).subscribe({
-      next: (borrower) => {
-        this.borrowers = [borrower, ...this.borrowers];
+
+    this.runAction(
+      'createBorrower',
+      () => this.api.createBorrower(this.borrowerForm.getRawValue() as unknown as CreateBorrowerRequest),
+      (borrower) => {
         this.borrowerForm.reset();
         this.addressArray.clear();
         this.addressArray.push(this.createAddressGroup('REGISTERED'));
-        this.notice = { kind: 'success', text: `Borrower ${borrower.legalBusinessName} created` };
+        this.borrowers = [borrower, ...this.borrowers.filter((item) => item.id !== borrower.id)];
+        this.selectBorrower(borrower);
+        this.notice = { kind: 'success', text: `Borrower ${borrower.legalBusinessName} created.` };
       },
-      error: () => this.warn('Unable to create borrower')
-    });
+      'Unable to create borrower'
+    );
+  }
+
+  selectBorrower(borrower: BorrowerResponse): void {
+    this.selectedBorrower = borrower;
+    this.applicationForm.patchValue({ borrowerId: borrower.id });
+    this.eligibilityForm.patchValue({ borrowerId: borrower.id });
+    this.loadBorrowerDocuments(borrower.id);
+    this.notice = { kind: 'info', text: `Borrower ${borrower.legalBusinessName} selected for KYC actions.` };
+  }
+
+  createBorrowerDocument(): void {
+    if (!this.selectedBorrower) {
+      this.notice = { kind: 'warning', text: 'Select a borrower first.' };
+      return;
+    }
+    if (this.documentForm.invalid) {
+      this.touch(this.documentForm);
+      this.notice = { kind: 'warning', text: 'Document form has validation errors.' };
+      return;
+    }
+
+    const payload = this.documentForm.getRawValue() as unknown as CreateBorrowerDocumentRequest;
+    this.runAction(
+      'createDocument',
+      () => this.api.createBorrowerDocument(this.selectedBorrower!.id, payload),
+      () => {
+        this.documentForm.patchValue({ fileName: '', fileReference: '', remarks: '' });
+        this.reloadBorrowersAndDocuments(this.selectedBorrower!.id, 'Document metadata added to the borrower KYC queue.');
+      },
+      'Unable to add borrower document'
+    );
+  }
+
+  reviewDocument(document: BorrowerDocumentResponse, documentStatus: BorrowerDocumentStatus): void {
+    if (!this.selectedBorrower) {
+      return;
+    }
+
+    const payload: UpdateBorrowerDocumentStatusRequest = {
+      documentStatus,
+      remarks: String(this.documentReviewForm.get('remarks')?.value ?? '')
+    };
+
+    this.runAction(
+      `reviewDocument-${document.id}`,
+      () => this.api.updateBorrowerDocumentStatus(this.selectedBorrower!.id, document.id, payload),
+      () => {
+        this.documentReviewForm.patchValue({ remarks: '' });
+        this.reloadBorrowersAndDocuments(this.selectedBorrower!.id, `Document ${document.fileName} marked as ${documentStatus}.`);
+      },
+      'Unable to update borrower document status'
+    );
   }
 
   createLoanProduct(): void {
     if (this.loanProductForm.invalid) {
       this.touch(this.loanProductForm);
-      this.warn('Loan product form has validation errors');
+      this.notice = { kind: 'warning', text: 'Loan product form has validation errors.' };
       return;
     }
-    const payload = this.loanProductForm.getRawValue() as unknown as CreateLoanProductRequest;
-    this.api.createLoanProduct(payload).subscribe({
-      next: (product) => {
-        this.loanProducts = [product, ...this.loanProducts];
-        this.notice = { kind: 'success', text: `Loan product ${product.productCode} created` };
+
+    this.runAction(
+      'createProduct',
+      () => this.api.createLoanProduct(this.loanProductForm.getRawValue() as unknown as CreateLoanProductRequest),
+      (product) => {
+        this.loanProducts = [product, ...this.loanProducts.filter((item) => item.id !== product.id)];
+        this.notice = { kind: 'success', text: `Loan product ${product.productCode} created.` };
       },
-      error: () => this.warn('Unable to create loan product')
-    });
-  }
-
-  createApplication(): void {
-    if (this.applicationForm.invalid) {
-      this.touch(this.applicationForm);
-      this.warn('Loan application form has validation errors');
-      return;
-    }
-    const payload = this.applicationForm.getRawValue() as unknown as CreateLoanApplicationRequest;
-    this.api.createLoanApplication(payload).subscribe({
-      next: (application) => {
-        this.applications = [application, ...this.applications];
-        this.selectApplication(application);
-        this.notice = { kind: 'success', text: `Application ${application.id} created` };
-      },
-      error: () => this.warn('Unable to create application')
-    });
-  }
-
-  submitApplication(): void {
-    if (!this.selectedApplication) {
-      this.warn('Select an application first');
-      return;
-    }
-    this.api.submitApplication(this.selectedApplication.id).subscribe({
-      next: (application) => this.replaceApplication(application),
-      error: () => this.warn('Unable to submit application')
-    });
-  }
-
-  assignReviewer(): void {
-    if (!this.selectedApplication) {
-      this.warn('Select an application first');
-      return;
-    }
-    const payload = this.reviewerForm.getRawValue() as unknown as AssignReviewerRequest;
-    this.api.assignReviewer(this.selectedApplication.id, payload).subscribe({
-      next: (application) => this.replaceApplication(application),
-      error: () => this.warn('Unable to assign reviewer')
-    });
-  }
-
-  decideApplication(): void {
-    if (!this.selectedApplication) {
-      this.warn('Select an application first');
-      return;
-    }
-    const payload = this.decisionForm.getRawValue() as unknown as ApplicationDecisionRequest;
-    this.api.decideApplication(this.selectedApplication.id, payload).subscribe({
-      next: (application) => this.replaceApplication(application),
-      error: () => this.warn('Unable to save decision')
-    });
-  }
-
-  disburseApplication(): void {
-    if (!this.selectedApplication) {
-      this.warn('Select an application first');
-      return;
-    }
-    const payload = this.disbursementForm.getRawValue() as unknown as DisburseLoanRequest;
-    this.api.disburseApplication(this.selectedApplication.id, payload).subscribe({
-      next: (application) => {
-        this.replaceApplication(application);
-        this.notice = { kind: 'success', text: `Application ${application.id} disbursed` };
-        this.loadReport();
-        this.api.loanAccountByApplication(application.id).subscribe((account) => this.selectAccount(account));
-      },
-      error: () => this.warn('Unable to disburse application')
-    });
+      'Unable to create loan product'
+    );
   }
 
   evaluateEligibility(): void {
     if (this.eligibilityForm.invalid) {
       this.touch(this.eligibilityForm);
-      this.warn('Eligibility form has validation errors');
+      this.notice = { kind: 'warning', text: 'Eligibility form has validation errors.' };
       return;
     }
-    this.api.evaluateEligibility(this.eligibilityForm.getRawValue() as unknown as EvaluateEligibilityRequest).subscribe((result) => {
-      this.eligibility = result;
-      this.notice = result.eligible
-        ? { kind: 'success', text: result.summary }
-        : { kind: 'warning', text: result.summary };
-    });
+
+    this.runAction(
+      'evaluateEligibility',
+      () => this.api.evaluateEligibility(this.eligibilityForm.getRawValue() as unknown as EvaluateEligibilityRequest),
+      (result) => {
+        this.eligibility = result;
+        this.notice = { kind: result.eligible ? 'success' : 'warning', text: result.summary };
+      },
+      'Unable to evaluate eligibility'
+    );
+  }
+
+  createApplication(): void {
+    if (this.applicationForm.invalid) {
+      this.touch(this.applicationForm);
+      this.notice = { kind: 'warning', text: 'Loan application form has validation errors.' };
+      return;
+    }
+
+    this.runAction(
+      'createApplication',
+      () => this.api.createLoanApplication(this.applicationForm.getRawValue() as unknown as CreateLoanApplicationRequest),
+      (application) => {
+        this.applications = [application, ...this.applications.filter((item) => item.id !== application.id)];
+        this.selectApplication(application);
+        this.reloadDashboard();
+        this.notice = { kind: 'success', text: `Application ${application.id} created in draft state.` };
+      },
+      'Unable to create application'
+    );
+  }
+
+  selectApplication(application: LoanApplicationResponse): void {
+    this.selectedApplication = application;
+    this.patchApplicationForms(application);
+    this.notice = { kind: 'info', text: `Application ${application.id} selected for workflow actions.` };
+  }
+
+  submitApplication(): void {
+    if (!this.selectedApplication) {
+      this.notice = { kind: 'warning', text: 'Select an application first.' };
+      return;
+    }
+
+    this.runAction(
+      'submitApplication',
+      () => this.api.submitApplication(this.selectedApplication!.id),
+      (application) => {
+        this.replaceApplication(application);
+        this.reloadDashboard();
+        this.notice = { kind: 'success', text: `Application ${application.id} submitted for review.` };
+      },
+      'Unable to submit application'
+    );
+  }
+
+  assignReviewer(): void {
+    if (!this.selectedApplication) {
+      this.notice = { kind: 'warning', text: 'Select an application first.' };
+      return;
+    }
+    if (this.reviewerForm.invalid) {
+      this.touch(this.reviewerForm);
+      this.notice = { kind: 'warning', text: 'Choose a reviewer before assigning.' };
+      return;
+    }
+
+    this.runAction(
+      'assignReviewer',
+      () => this.api.assignReviewer(this.selectedApplication!.id, this.reviewerForm.getRawValue() as unknown as AssignReviewerRequest),
+      (application) => {
+        this.replaceApplication(application);
+        this.reloadDashboard();
+        this.notice = { kind: 'success', text: `Reviewer assigned to application ${application.id}.` };
+      },
+      'Unable to assign reviewer'
+    );
+  }
+
+  decideApplication(): void {
+    if (!this.selectedApplication) {
+      this.notice = { kind: 'warning', text: 'Select an application first.' };
+      return;
+    }
+    if (this.decisionForm.invalid) {
+      this.touch(this.decisionForm);
+      this.notice = { kind: 'warning', text: 'Decision form has validation errors.' };
+      return;
+    }
+
+    this.runAction(
+      'decideApplication',
+      () => this.api.decideApplication(this.selectedApplication!.id, this.decisionForm.getRawValue() as unknown as ApplicationDecisionRequest),
+      (application) => {
+        this.replaceApplication(application);
+        this.reloadDashboard();
+        this.notice = { kind: 'success', text: `Decision saved for application ${application.id}.` };
+      },
+      'Unable to save application decision'
+    );
+  }
+
+  disburseApplication(): void {
+    if (!this.selectedApplication) {
+      this.notice = { kind: 'warning', text: 'Select an application first.' };
+      return;
+    }
+    if (this.disbursementForm.invalid) {
+      this.touch(this.disbursementForm);
+      this.notice = { kind: 'warning', text: 'Disbursement form has validation errors.' };
+      return;
+    }
+
+    this.runAction(
+      'disburseApplication',
+      () => this.api.disburseApplication(this.selectedApplication!.id, this.disbursementForm.getRawValue() as unknown as DisburseLoanRequest),
+      (application) => {
+        this.replaceApplication(application);
+        this.reloadDashboard();
+        this.reloadAccounts(application.id);
+        this.loadReport();
+        this.notice = { kind: 'success', text: `Application ${application.id} disbursed successfully.` };
+      },
+      'Unable to disburse application'
+    );
   }
 
   createRule(): void {
     if (this.ruleForm.invalid) {
       this.touch(this.ruleForm);
-      this.warn('Rule form has validation errors');
+      this.notice = { kind: 'warning', text: 'Rule form has validation errors.' };
       return;
     }
-    const payload = this.ruleForm.getRawValue() as unknown as CreateEligibilityRuleRequest;
-    this.api.createEligibilityRule(payload).subscribe({
-      next: (rule) => {
-        this.rules = [rule, ...this.rules];
-        this.notice = { kind: 'success', text: `Rule ${rule.ruleCode} created` };
+
+    this.runAction(
+      'createRule',
+      () => this.api.createEligibilityRule(this.ruleForm.getRawValue() as unknown as CreateEligibilityRuleRequest),
+      (rule) => {
+        this.rules = [rule, ...this.rules.filter((item) => item.id !== rule.id)];
+        this.notice = { kind: 'success', text: `Eligibility rule ${rule.ruleCode} created.` };
       },
-      error: () => this.warn('Unable to create eligibility rule')
-    });
+      'Unable to create eligibility rule'
+    );
+  }
+
+  selectAccount(account: LoanAccountResponse): void {
+    this.selectedAccount = account;
+    this.patchRepaymentForm(account);
+    this.notice = { kind: 'info', text: `Account ${account.accountNumber} selected for servicing.` };
   }
 
   recordRepayment(): void {
     if (!this.selectedAccount) {
-      this.warn('Select a loan account first');
+      this.notice = { kind: 'warning', text: 'Select a loan account first.' };
       return;
     }
     if (this.repaymentForm.invalid) {
       this.touch(this.repaymentForm);
-      this.warn('Repayment form has validation errors');
+      this.notice = { kind: 'warning', text: 'Repayment form has validation errors.' };
       return;
     }
-    const payload = this.repaymentForm.getRawValue() as unknown as RecordRepaymentRequest;
-    this.api.recordRepayment(this.selectedAccount.id, payload).subscribe({
-      next: (account) => {
-        this.selectAccount(account);
-        this.accounts = this.accounts.map((item) => (item.id === account.id ? account : item));
-        this.notice = { kind: 'success', text: `Repayment recorded for ${account.accountNumber}` };
+
+    const account = this.selectedAccount;
+    this.runAction(
+      'recordRepayment',
+      () => this.api.recordRepayment(account.id, this.repaymentForm.getRawValue() as unknown as RecordRepaymentRequest),
+      (transaction) => {
+        this.notice = { kind: 'success', text: `Repayment ${transaction.transactionReference} recorded successfully.` };
+        this.reloadAccounts(account.applicationId);
+        this.reloadDashboard();
+        this.loadReport();
       },
-      error: () => this.warn('Unable to record repayment')
-    });
+      'Unable to record repayment'
+    );
   }
 
   loadReport(): void {
-    const filters = this.reportForm.getRawValue() as Record<string, any>;
-    this.api.report({ from: filters['from'] || undefined, to: filters['to'] || undefined }, this.reportPage, filters['size'] ?? 8)
-      .subscribe((report) => (this.report = report));
+    this.api.report(this.reportFilters(), this.reportPage, this.reportPageSize).subscribe({
+      next: (report) => {
+        this.report = report;
+      },
+      error: (error) => this.handleError(error, 'Unable to load disbursement report')
+    });
   }
 
   exportCsv(): void {
-    const filters = this.reportForm.getRawValue() as Record<string, any>;
-    this.api.exportDisbursements({ from: filters['from'] || undefined, to: filters['to'] || undefined }).subscribe((csv) => {
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'disbursement-report.csv';
-      link.click();
-      URL.revokeObjectURL(url);
-    });
-  }
-
-  searchBorrowers(): void {
-    this.api.borrowers(this.borrowerSearchForm.getRawValue() as unknown as { businessPan?: string; businessName?: string }).subscribe((items) => {
-      this.borrowers = items;
-      this.notice = { kind: 'info', text: `Loaded ${items.length} borrower record(s)` };
-    });
-  }
-
-  searchProducts(): void {
-    this.api.loanProducts(this.productFilters()).subscribe((items) => {
-      this.loanProducts = items;
-      this.notice = { kind: 'info', text: `Loaded ${items.length} product record(s)` };
-    });
-  }
-
-  searchApplications(): void {
-    this.api.applications(this.applicationFilters()).subscribe((items) => {
-      this.applications = items;
-      if (items.length) {
-        this.selectApplication(items[0]);
-      }
-      this.notice = { kind: 'info', text: `Loaded ${items.length} application record(s)` };
-    });
+    this.runAction(
+      'exportCsv',
+      () => this.api.exportDisbursements(this.reportFilters()),
+      (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'disbursement-report.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+        this.notice = { kind: 'success', text: 'Disbursement report download started.' };
+      },
+      'Unable to export disbursement report'
+    );
   }
 
   previousPage(): void {
@@ -423,8 +704,132 @@ export class AppComponent implements OnInit {
     }
   }
 
-  selectApplication(application: LoanApplicationResponse): void {
+  formatMoney(value: number | null | undefined): string {
+    if (value === null || value === undefined) {
+      return '0';
+    }
+    return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  }
+
+  formatLabel(value: string): string {
+    return value.replace(/_/g, ' ');
+  }
+
+  kycBadgeKind(borrower: BorrowerResponse | null): NoticeKind {
+    if (!borrower) {
+      return 'info';
+    }
+    return borrower.kycSummary.kycComplete ? 'success' : 'warning';
+  }
+
+  documentCanVerify(document: BorrowerDocumentResponse): boolean {
+    return document.documentStatus === 'UPLOADED' || document.documentStatus === 'PENDING' || document.documentStatus === 'REJECTED';
+  }
+
+  documentCanReject(document: BorrowerDocumentResponse): boolean {
+    return document.documentStatus === 'UPLOADED' || document.documentStatus === 'PENDING' || document.documentStatus === 'VERIFIED';
+  }
+
+  private restoreSession(): void {
+    this.bootstrapping = true;
+    this.api.me().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.authSession.setUserInfo(user);
+        this.bootstrapping = false;
+        this.refreshAll(true);
+      },
+      error: () => {
+        this.bootstrapping = false;
+        this.clearSession('Stored session expired. Please sign in again.');
+      }
+    });
+  }
+
+  private clearSession(message: string): void {
+    this.authSession.clear();
+    this.authResponse = null;
+    this.currentUser = null;
+    this.reviewers = [];
+    this.borrowers = [];
+    this.borrowerDocuments = [];
+    this.loanProducts = [];
+    this.applications = [];
+    this.accounts = [];
+    this.rules = [];
+    this.report = null;
+    this.selectedBorrower = null;
+    this.selectedApplication = null;
+    this.selectedAccount = null;
+    this.actionBusy = null;
+    this.pageBusy = false;
+    this.notice = { kind: 'info', text: message };
+  }
+
+  private loadBorrowerDocuments(borrowerId: number): void {
+    this.api.borrowerDocuments(borrowerId).subscribe({
+      next: (documents) => {
+        this.borrowerDocuments = documents;
+      },
+      error: (error) => this.handleError(error, 'Unable to load borrower document queue')
+    });
+  }
+
+  private reloadBorrowersAndDocuments(borrowerId: number, successText: string): void {
+    this.api.borrowers(this.borrowerFilters()).subscribe({
+      next: (borrowers) => {
+        this.borrowers = borrowers;
+        const match = borrowers.find((item) => item.id === borrowerId);
+        if (match) {
+          this.selectedBorrower = match;
+          this.loadBorrowerDocuments(match.id);
+        }
+        this.notice = { kind: 'success', text: successText };
+      },
+      error: (error) => this.handleError(error, 'Unable to refresh borrower KYC data')
+    });
+  }
+
+  private reloadAccounts(applicationId?: number): void {
+    this.api.loanAccounts().subscribe({
+      next: (accounts) => {
+        this.accounts = accounts;
+        if (applicationId) {
+          this.api.loanAccountByApplication(applicationId).subscribe({
+            next: (account) => this.selectAccount(account),
+            error: (error) => this.handleError(error, 'Unable to reload the new loan account')
+          });
+          return;
+        }
+
+        const selectedId = this.selectedAccount?.id;
+        const match = accounts.find((item) => item.id === selectedId) ?? accounts[0] ?? null;
+        if (match) {
+          this.selectAccount(match);
+        } else {
+          this.selectedAccount = null;
+        }
+      },
+      error: (error) => this.handleError(error, 'Unable to refresh loan accounts')
+    });
+  }
+
+  private reloadDashboard(): void {
+    this.api.dashboard().subscribe({
+      next: (summary) => {
+        this.summary = summary;
+      },
+      error: (error) => this.handleError(error, 'Unable to refresh dashboard summary')
+    });
+  }
+
+  private replaceApplication(application: LoanApplicationResponse): void {
     this.selectedApplication = application;
+    this.applications = [application, ...this.applications.filter((item) => item.id !== application.id)];
+    this.patchApplicationForms(application);
+  }
+
+  private patchApplicationForms(application: LoanApplicationResponse): void {
     this.applicationForm.patchValue({
       borrowerId: application.borrowerId,
       loanProductId: application.loanProductId,
@@ -440,24 +845,24 @@ export class AppComponent implements OnInit {
     });
   }
 
-  selectAccount(account: LoanAccountResponse): void {
-    this.selectedAccount = account;
+  private patchRepaymentForm(account: LoanAccountResponse): void {
     this.repaymentForm.patchValue({
       amount: account.monthlyInstallmentAmount,
-      transactionReference: `TXN-${account.accountNumber}`,
+      transactionReference: `TXN-${account.accountNumber}-${Date.now()}`,
       paymentDate: this.today()
     });
   }
 
-  formatMoney(value: number | null | undefined): string {
-    if (value === null || value === undefined) {
-      return '0';
-    }
-    return value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  private borrowerFilters(): { businessPan?: string; businessName?: string } {
+    const value = this.borrowerSearchForm.getRawValue() as Record<string, string>;
+    return {
+      businessPan: value['businessPan'] || undefined,
+      businessName: value['businessName'] || undefined
+    };
   }
 
   private productFilters(): { name?: string; active?: boolean | null; amount?: number; maxTenureMonths?: number } {
-    const value = this.loanProductSearchForm.getRawValue() as Record<string, any>;
+    const value = this.loanProductSearchForm.getRawValue() as Record<string, string>;
     return {
       name: value['name'] || undefined,
       active: value['active'] === '' ? null : value['active'] === 'true' ? true : value['active'] === 'false' ? false : null,
@@ -467,16 +872,18 @@ export class AppComponent implements OnInit {
   }
 
   private applicationFilters(): { status?: string | null } {
-    const value = this.applicationSearchForm.getRawValue() as Record<string, any>;
+    const value = this.applicationSearchForm.getRawValue() as Record<string, string>;
     return {
       status: value['status'] || undefined
     };
   }
 
-  private replaceApplication(application: LoanApplicationResponse): void {
-    this.selectedApplication = application;
-    this.applications = this.applications.map((item) => (item.id === application.id ? application : item));
-    this.applications = [application, ...this.applications.filter((item) => item.id !== application.id)];
+  private reportFilters(): { from?: string; to?: string } {
+    const value = this.reportForm.getRawValue() as Record<string, string>;
+    return {
+      from: value['from'] || undefined,
+      to: value['to'] || undefined
+    };
   }
 
   private createAddressGroup(addressType: BorrowerAddressRequest['addressType'] = 'REGISTERED') {
@@ -495,11 +902,36 @@ export class AppComponent implements OnInit {
     control.markAllAsTouched();
   }
 
-  private warn(text: string): void {
-    this.notice = { kind: 'warning', text };
-  }
-
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private handleError(error: unknown, fallbackText: string): void {
+    const httpError = error as HttpErrorResponse;
+    const apiError = httpError?.error as ApiErrorResponse | string | undefined;
+    const detail = typeof apiError === 'string'
+      ? apiError
+      : apiError?.message || httpError?.message || fallbackText;
+
+    this.notice = { kind: 'danger', text: `${fallbackText}. ${detail}` };
+  }
+
+  private runAction<T>(
+    key: string,
+    action: () => Observable<T>,
+    onSuccess: (value: T) => void,
+    fallbackText: string
+  ): void {
+    this.actionBusy = key;
+    action().subscribe({
+      next: (value) => {
+        this.actionBusy = null;
+        onSuccess(value);
+      },
+      error: (error) => {
+        this.actionBusy = null;
+        this.handleError(error, fallbackText);
+      }
+    });
   }
 }
