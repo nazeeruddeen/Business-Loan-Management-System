@@ -38,6 +38,10 @@ Required KYC documents are enforced at workflow time. By default:
 - `BANK_STATEMENT`
 - `GST_CERTIFICATE` when GSTIN is present
 
+Workflow note:
+
+- the operator console surfaces missing KYC documents explicitly before submit or reviewer assignment is attempted
+
 ## Loan Products
 
 - `POST /loan-products`
@@ -49,6 +53,8 @@ Required KYC documents are enforced at workflow time. By default:
 - `POST /eligibility/evaluate`
 - `POST /eligibility-rules`
 - `GET /eligibility-rules`
+
+Eligibility rules are versioned in the database so policy changes remain auditable and visible in the operator console.
 
 ## Loan Applications
 
@@ -65,6 +71,15 @@ Workflow notes:
 - submission fails if eligibility is not passed
 - submission fails if borrower KYC is incomplete
 - reviewer assignment also fails if borrower KYC is incomplete
+
+Failures are returned as structured business-rule errors (`422 Unprocessable Entity`) or conflict errors (`409 Conflict`) instead of generic server failures.
+
+Operational note:
+
+- the operator console and API responses share the same workflow blocker language
+- correlation IDs and logs should be used together when investigating retry, KYC, or approval failures
+- the production runbook in `RUNBOOK.md` captures the recovery path for blocked submissions and workflow conflicts
+- production Kubernetes deployments expect datasource credentials, JWT secrets, and connection settings to arrive through External Secrets rather than committed manifest values
 
 ## Loan Accounts
 

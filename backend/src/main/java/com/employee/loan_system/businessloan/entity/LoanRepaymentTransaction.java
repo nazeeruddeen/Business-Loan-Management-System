@@ -48,6 +48,9 @@ public class LoanRepaymentTransaction {
     @Column(name = "applied_principal_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal appliedPrincipalAmount;
 
+    @Column(name = "prepayment_principal_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal prepaymentPrincipalAmount = BigDecimal.ZERO;
+
     @Column(name = "applied_interest_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal appliedInterestAmount;
 

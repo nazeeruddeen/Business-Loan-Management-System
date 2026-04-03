@@ -69,8 +69,11 @@ pipeline {
                 expression { return env.KUBECONFIG?.trim() }
             }
             steps {
-                sh 'kubectl apply -f k8s/'
-                sh "kubectl rollout status deployment/${APP_NAME} --timeout=120s"
+                sh 'kubectl apply -f k8s/00-namespace.yaml'
+                sh 'kubectl apply -f k8s/01-configmap.yaml'
+                sh 'kubectl apply -f k8s/02-secret.yaml'
+                sh 'kubectl apply -f k8s/04-backend.yaml'
+                sh 'kubectl rollout status deployment/business-loan-backend -n business-loan --timeout=180s'
             }
         }
     }

@@ -4,12 +4,14 @@ services:
     container_name: business-loan-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${BUSINESS_LOAN_MYSQL_ROOT_PASSWORD:?set BUSINESS_LOAN_MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: business_loan_management
+      MYSQL_USER: business_loan_app
+      MYSQL_PASSWORD: ${BUSINESS_LOAN_DB_PASSWORD:?set BUSINESS_LOAN_DB_PASSWORD}
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -24,13 +26,20 @@ services:
       mysql:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: local
       SERVER_PORT: 8010
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/business_loan_management?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      APP_SECURITY_JWT_SECRET: QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo0NTY3ODkwQUJDREVGR0hJSktMTU5PUFFSU1RVVg==
+      SPRING_DATASOURCE_USERNAME: business_loan_app
+      SPRING_DATASOURCE_PASSWORD: ${BUSINESS_LOAN_DB_PASSWORD:?set BUSINESS_LOAN_DB_PASSWORD}
+      APP_SECURITY_JWT_SECRET: ${BUSINESS_LOAN_JWT_SECRET:?set BUSINESS_LOAN_JWT_SECRET}
       APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRATION_MS: 900000
       APP_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION_MS: 604800000
+      APP_SECURITY_ALLOWED_ORIGIN_PATTERNS: http://localhost:4300
+      APP_SECURITY_BOOTSTRAP_USERS_ENABLED: "true"
+      APP_SECURITY_BOOTSTRAP_ADMIN_PASSWORD: ${BUSINESS_LOAN_ADMIN_PASSWORD:?set BUSINESS_LOAN_ADMIN_PASSWORD}
+      APP_SECURITY_BOOTSTRAP_OFFICER_PASSWORD: ${BUSINESS_LOAN_OFFICER_PASSWORD:?set BUSINESS_LOAN_OFFICER_PASSWORD}
+      APP_SECURITY_BOOTSTRAP_REVIEWER_PASSWORD: ${BUSINESS_LOAN_REVIEWER_PASSWORD:?set BUSINESS_LOAN_REVIEWER_PASSWORD}
+      APP_SECURITY_BOOTSTRAP_BORROWER_PASSWORD: ${BUSINESS_LOAN_BORROWER_PASSWORD:?set BUSINESS_LOAN_BORROWER_PASSWORD}
       SPRING_JPA_SHOW_SQL: "false"
     ports:
       - "8010:8010"

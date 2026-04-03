@@ -46,6 +46,15 @@ export interface ApiErrorResponse {
   error?: string;
   message?: string;
   path?: string;
+  errors?: Record<string, string>;
+}
+
+export interface PagedResponse<T> {
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  items: T[];
 }
 
 export interface BorrowerAddressRequest {
@@ -219,6 +228,7 @@ export interface EligibilityEvaluationResponse {
 
 export interface EligibilityRuleResponse {
   id: number;
+  version: number;
   ruleCode: string;
   ruleExpression: string;
   ruleType: EligibilityRuleType;
@@ -275,6 +285,7 @@ export interface LoanRepaymentTransactionResponse {
   transactionReference: string;
   amount: number;
   appliedPrincipalAmount: number;
+  prepaymentPrincipalAmount: number;
   appliedInterestAmount: number;
   paymentMode: PaymentMode;
   paymentDate: string;

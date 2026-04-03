@@ -8,6 +8,7 @@ import com.employee.loan_system.businessloan.dto.CreateLoanApplicationRequest;
 import com.employee.loan_system.businessloan.dto.DisburseLoanRequest;
 import com.employee.loan_system.businessloan.dto.EligibilityEvaluationResponse;
 import com.employee.loan_system.businessloan.dto.LoanApplicationResponse;
+import com.employee.loan_system.businessloan.dto.PagedResponse;
 import com.employee.loan_system.businessloan.entity.ApplicationStatus;
 import com.employee.loan_system.businessloan.entity.ApplicationStatusHistory;
 import com.employee.loan_system.businessloan.entity.Borrower;
@@ -24,6 +25,7 @@ import com.employee.loan_system.entity.AppUser;
 import com.employee.loan_system.entity.UserRole;
 import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Pageable;
 import com.employee.loan_system.repository.AppUserRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -214,11 +216,11 @@ public class LoanApplicationService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER','BORROWER')")
-    public List<LoanApplicationResponse> listApplications(ApplicationStatus status) {
-        List<LoanApplication> applications = status == null
-                ? loanApplicationRepository.findAllByOrderByCreatedAtDesc()
-                : loanApplicationRepository.findByStatusOrderByCreatedAtDesc(status);
-        return applications.stream().map(this::toResponse).toList();
+    public PagedResponse<LoanApplicationResponse> listApplications(ApplicationStatus status, Pageable pageable) {
+        return PagedResponse.from((status == null
+                ? loanApplicationRepository.findAllByOrderByCreatedAtDesc(pageable)
+                : loanApplicationRepository.findByStatusOrderByCreatedAtDesc(status, pageable))
+                .map(this::toResponse));
     }
 
     private LoanApplication findApplication(Long applicationId) {

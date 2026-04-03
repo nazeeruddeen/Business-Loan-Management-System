@@ -24,6 +24,7 @@ import {
   LoanProductResponse,
   LoanRepaymentTransactionResponse,
   LoginRequest,
+  PagedResponse,
   RecordRepaymentRequest,
   UpdateBorrowerDocumentStatusRequest,
   UserInfoResponse,
@@ -59,8 +60,8 @@ export class BusinessLoanApiService {
     return this.http.get<BusinessLoanDashboardResponse>(this.url('/loan-accounts/dashboard'));
   }
 
-  borrowers(filters: { businessPan?: string; businessName?: string } = {}): Observable<BorrowerResponse[]> {
-    return this.http.get<BorrowerResponse[]>(this.url('/borrowers'), { params: this.params(filters) });
+  borrowers(filters: { businessPan?: string; businessName?: string; page?: number; size?: number } = {}): Observable<PagedResponse<BorrowerResponse>> {
+    return this.http.get<PagedResponse<BorrowerResponse>>(this.url('/borrowers'), { params: this.params(filters) });
   }
 
   createBorrower(payload: CreateBorrowerRequest): Observable<BorrowerResponse> {
@@ -103,8 +104,8 @@ export class BusinessLoanApiService {
     return this.http.post<EligibilityEvaluationResponse>(this.url('/eligibility/evaluate'), payload);
   }
 
-  applications(filters: { status?: string | null } = {}): Observable<LoanApplicationResponse[]> {
-    return this.http.get<LoanApplicationResponse[]>(this.url('/loan-applications'), { params: this.params(filters) });
+  applications(filters: { status?: string | null; page?: number; size?: number } = {}): Observable<PagedResponse<LoanApplicationResponse>> {
+    return this.http.get<PagedResponse<LoanApplicationResponse>>(this.url('/loan-applications'), { params: this.params(filters) });
   }
 
   createLoanApplication(payload: CreateLoanApplicationRequest): Observable<LoanApplicationResponse> {
@@ -135,8 +136,8 @@ export class BusinessLoanApiService {
     return this.http.get<LoanAccountResponse>(this.url(`/loan-accounts/${accountNumber}`));
   }
 
-  loanAccounts(): Observable<LoanAccountResponse[]> {
-    return this.http.get<LoanAccountResponse[]>(this.url('/loan-accounts'));
+  loanAccounts(page = 0, size = 20): Observable<PagedResponse<LoanAccountResponse>> {
+    return this.http.get<PagedResponse<LoanAccountResponse>>(this.url('/loan-accounts'), { params: this.params({ page, size }) });
   }
 
   recordRepayment(accountId: number, payload: RecordRepaymentRequest): Observable<LoanRepaymentTransactionResponse> {

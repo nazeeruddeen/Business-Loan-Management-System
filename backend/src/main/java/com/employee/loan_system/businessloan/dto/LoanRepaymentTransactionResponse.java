@@ -13,6 +13,7 @@ public record LoanRepaymentTransactionResponse(
         String transactionReference,
         BigDecimal amount,
         BigDecimal appliedPrincipalAmount,
+        BigDecimal prepaymentPrincipalAmount,
         BigDecimal appliedInterestAmount,
         PaymentMode paymentMode,
         LocalDate paymentDate,

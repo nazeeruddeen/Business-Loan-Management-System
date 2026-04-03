@@ -51,6 +51,7 @@ public class EligibilityRuleService {
     private EligibilityRuleResponse toResponse(EligibilityRule rule) {
         return EligibilityRuleResponse.builder()
                 .id(rule.getId())
+                .version(rule.getVersion())
                 .ruleCode(rule.getRuleCode())
                 .ruleExpression(rule.getRuleExpression())
                 .ruleType(rule.getRuleType())

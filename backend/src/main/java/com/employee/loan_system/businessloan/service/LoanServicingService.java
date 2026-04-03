@@ -3,6 +3,7 @@ package com.employee.loan_system.businessloan.service;
 import com.employee.loan_system.businessloan.dto.BusinessLoanDashboardResponse;
 import com.employee.loan_system.businessloan.dto.LoanAccountResponse;
 import com.employee.loan_system.businessloan.dto.LoanRepaymentTransactionResponse;
+import com.employee.loan_system.businessloan.dto.PagedResponse;
 import com.employee.loan_system.businessloan.dto.RecordRepaymentRequest;
 import com.employee.loan_system.businessloan.dto.RepaymentInstallmentResponse;
 import com.employee.loan_system.businessloan.entity.InstallmentStatus;
@@ -17,6 +18,7 @@ import com.employee.loan_system.businessloan.repository.LoanRepaymentTransaction
 import com.employee.loan_system.businessloan.repository.RepaymentInstallmentRepository;
 import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -65,10 +67,9 @@ public class LoanServicingService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
-    public List<LoanAccountResponse> listAccounts() {
-        return loanAccountRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toResponse)
-                .toList();
+    public PagedResponse<LoanAccountResponse> listAccounts(Pageable pageable) {
+        return PagedResponse.from(loanAccountRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(this::toResponse));
     }
 
     @Transactional
@@ -87,15 +88,26 @@ public class LoanServicingService {
 
         BigDecimal totalAppliedPrincipal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalAppliedInterest = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal prepaymentPrincipalAmount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         RepaymentInstallment firstTouchedInstallment = null;
+        LocalDate paymentDate = request.getPaymentDate();
 
         List<RepaymentInstallment> installments = account.getInstallments().stream()
                 .sorted(Comparator.comparing(RepaymentInstallment::getInstallmentNumber))
                 .toList();
 
+        boolean hasDueInstallments = installments.stream()
+                .filter(this::hasRemainingDue)
+                .anyMatch(installment -> !installment.getDueDate().isAfter(paymentDate));
+        boolean advancedToNextInstallment = false;
+
         for (RepaymentInstallment installment : installments) {
             if (amountRemaining.compareTo(BigDecimal.ZERO) <= 0) {
                 break;
+            }
+
+            if (!isEligibleForScheduledPayment(installment, paymentDate, hasDueInstallments, advancedToNextInstallment)) {
+                continue;
             }
 
             BigDecimal interestRemaining = installment.getInterestDue().subtract(installment.getInterestPaid());
@@ -118,23 +130,32 @@ public class LoanServicingService {
             amountRemaining = amountRemaining.subtract(principalApplied);
             totalAppliedPrincipal = totalAppliedPrincipal.add(principalApplied);
 
-            if (installment.remainingDue().compareTo(BigDecimal.ZERO) <= 0) {
-                installment.setStatus(InstallmentStatus.PAID);
-                installment.setPaidAt(LocalDateTime.now());
-            } else if (installment.getDueDate().isBefore(LocalDate.now())) {
-                installment.setStatus(InstallmentStatus.OVERDUE);
-            } else {
-                installment.setStatus(InstallmentStatus.PARTIAL);
+            updateInstallmentStatus(installment, paymentDate);
+            if (hasDueInstallments || installment.getDueDate().isAfter(paymentDate) || installment.getDueDate().isEqual(paymentDate)) {
+                advancedToNextInstallment = true;
             }
         }
 
+        BigDecimal remainingPrincipalCapacity = account.getOutstandingPrincipal().subtract(totalAppliedPrincipal)
+                .max(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
+        if (amountRemaining.compareTo(BigDecimal.ZERO) > 0 && remainingPrincipalCapacity.compareTo(BigDecimal.ZERO) > 0) {
+            prepaymentPrincipalAmount = amountRemaining.min(remainingPrincipalCapacity);
+            amountRemaining = amountRemaining.subtract(prepaymentPrincipalAmount);
+            totalAppliedPrincipal = totalAppliedPrincipal.add(prepaymentPrincipalAmount);
+        }
+
         if (amountRemaining.compareTo(BigDecimal.ZERO) > 0) {
-            throw new BusinessRuleException("Repayment amount exceeds the outstanding schedule");
+            throw new BusinessRuleException("Repayment amount exceeds the outstanding principal and currently due interest");
         }
 
         account.setOutstandingPrincipal(account.getOutstandingPrincipal().subtract(totalAppliedPrincipal)
                 .max(BigDecimal.ZERO)
                 .setScale(2, RoundingMode.HALF_UP));
+        if (prepaymentPrincipalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            recastFutureInstallments(account, paymentDate);
+        }
+        refreshNextDueDate(account, paymentDate);
         if (account.getOutstandingPrincipal().compareTo(BigDecimal.ZERO) <= 0) {
             account.setStatus(LoanAccountStatus.CLOSED);
         }
@@ -143,9 +164,10 @@ public class LoanServicingService {
         transaction.setTransactionReference(request.getTransactionReference().trim());
         transaction.setAmount(request.getAmount().setScale(2, RoundingMode.HALF_UP));
         transaction.setAppliedPrincipalAmount(totalAppliedPrincipal);
+        transaction.setPrepaymentPrincipalAmount(prepaymentPrincipalAmount);
         transaction.setAppliedInterestAmount(totalAppliedInterest);
         transaction.setPaymentMode(request.getPaymentMode());
-        transaction.setPaymentDate(request.getPaymentDate());
+        transaction.setPaymentDate(paymentDate);
         transaction.setNotes(request.getNotes() == null ? null : request.getNotes().trim());
         transaction.setRecordedBy(currentActor());
         transaction.setInstallment(firstTouchedInstallment);
@@ -182,6 +204,107 @@ public class LoanServicingService {
     private LoanAccount findAccountByNumber(String accountNumber) {
         return loanAccountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan account not found with account number: " + accountNumber));
+    }
+
+    private boolean isEligibleForScheduledPayment(
+            RepaymentInstallment installment,
+            LocalDate paymentDate,
+            boolean hasDueInstallments,
+            boolean advancedToNextInstallment) {
+        if (!hasRemainingDue(installment)) {
+            return false;
+        }
+        if (!hasDueInstallments) {
+            return !advancedToNextInstallment;
+        }
+        return !installment.getDueDate().isAfter(paymentDate);
+    }
+
+    private boolean hasRemainingDue(RepaymentInstallment installment) {
+        return installment.remainingDue().compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private void updateInstallmentStatus(RepaymentInstallment installment, LocalDate paymentDate) {
+        if (installment.remainingDue().compareTo(BigDecimal.ZERO) <= 0) {
+            installment.setStatus(InstallmentStatus.PAID);
+            installment.setPaidAt(LocalDateTime.now());
+            installment.setRemarks(null);
+            return;
+        }
+        installment.setPaidAt(null);
+        installment.setStatus(installment.getDueDate().isBefore(paymentDate)
+                ? InstallmentStatus.OVERDUE
+                : InstallmentStatus.PARTIAL);
+    }
+
+    private void recastFutureInstallments(LoanAccount account, LocalDate paymentDate) {
+        List<RepaymentInstallment> futureInstallments = account.getInstallments().stream()
+                .filter(installment -> installment.remainingDue().compareTo(BigDecimal.ZERO) > 0)
+                .filter(installment -> installment.getPrincipalPaid().compareTo(BigDecimal.ZERO) == 0
+                        && installment.getInterestPaid().compareTo(BigDecimal.ZERO) == 0)
+                .sorted(Comparator.comparing(RepaymentInstallment::getInstallmentNumber))
+                .toList();
+
+        if (futureInstallments.isEmpty()) {
+            account.setMonthlyInstallmentAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            return;
+        }
+
+        BigDecimal remainingPrincipal = account.getOutstandingPrincipal().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal monthlyRate = account.getAnnualInterestRate().divide(BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);
+        BigDecimal recalculatedEmi = calculateEmi(remainingPrincipal, account.getAnnualInterestRate(), futureInstallments.size());
+
+        for (int index = 0; index < futureInstallments.size(); index++) {
+            RepaymentInstallment installment = futureInstallments.get(index);
+            BigDecimal interestDue = remainingPrincipal.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal principalDue = recalculatedEmi.subtract(interestDue).setScale(2, RoundingMode.HALF_UP);
+            if (index == futureInstallments.size() - 1) {
+                principalDue = remainingPrincipal;
+            }
+            if (principalDue.compareTo(BigDecimal.ZERO) < 0) {
+                principalDue = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            }
+
+            installment.setOpeningPrincipal(remainingPrincipal);
+            installment.setInterestDue(interestDue);
+            installment.setPrincipalDue(principalDue);
+            installment.setPrincipalPaid(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            installment.setInterestPaid(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            installment.setPaidAt(null);
+            installment.setStatus(installment.getDueDate().isBefore(paymentDate) ? InstallmentStatus.OVERDUE : InstallmentStatus.PENDING);
+            installment.setRemarks("Schedule recast after principal prepayment on " + paymentDate);
+
+            remainingPrincipal = remainingPrincipal.subtract(principalDue).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        account.setMonthlyInstallmentAmount(recalculatedEmi.setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private void refreshNextDueDate(LoanAccount account, LocalDate paymentDate) {
+        LocalDate nextDueDate = account.getInstallments().stream()
+                .filter(installment -> installment.remainingDue().compareTo(BigDecimal.ZERO) > 0)
+                .sorted(Comparator.comparing(RepaymentInstallment::getDueDate))
+                .map(RepaymentInstallment::getDueDate)
+                .findFirst()
+                .orElse(paymentDate);
+        account.setNextDueDate(nextDueDate);
+    }
+
+    private BigDecimal calculateEmi(BigDecimal principal, BigDecimal annualInterestRate, Integer tenureMonths) {
+        if (tenureMonths == null || tenureMonths <= 0) {
+            return principal.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal monthlyRate = annualInterestRate.divide(BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);
+        if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
+            return principal.divide(BigDecimal.valueOf(tenureMonths), 2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal onePlusRate = BigDecimal.ONE.add(monthlyRate);
+        BigDecimal factor = onePlusRate.pow(tenureMonths);
+        BigDecimal numerator = principal.multiply(monthlyRate).multiply(factor);
+        BigDecimal denominator = factor.subtract(BigDecimal.ONE);
+        return numerator.divide(denominator, 2, RoundingMode.HALF_UP);
     }
 
     private LoanAccountResponse toResponse(LoanAccount account) {
@@ -239,6 +362,7 @@ public class LoanServicingService {
                 .transactionReference(transaction.getTransactionReference())
                 .amount(transaction.getAmount())
                 .appliedPrincipalAmount(transaction.getAppliedPrincipalAmount())
+                .prepaymentPrincipalAmount(transaction.getPrepaymentPrincipalAmount())
                 .appliedInterestAmount(transaction.getAppliedInterestAmount())
                 .paymentMode(transaction.getPaymentMode())
                 .paymentDate(transaction.getPaymentDate())

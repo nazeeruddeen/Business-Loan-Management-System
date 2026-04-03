@@ -26,6 +26,9 @@ public interface LoanAccountRepository extends JpaRepository<LoanAccount, Long> 
     List<LoanAccount> findAllByOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = {"loanApplication", "loanApplication.borrower", "loanApplication.loanProduct"})
+    Page<LoanAccount> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"loanApplication", "loanApplication.borrower", "loanApplication.loanProduct"})
     Page<LoanAccount> findByDisbursedAtBetweenOrderByDisbursedAtDesc(LocalDateTime from, LocalDateTime to, Pageable pageable);
 
     @EntityGraph(attributePaths = {"loanApplication", "loanApplication.borrower", "loanApplication.loanProduct"})

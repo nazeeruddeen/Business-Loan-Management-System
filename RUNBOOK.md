@@ -1,0 +1,58 @@
+# Business Loan Production Runbook
+
+This runbook matches the current production hardening in the codebase:
+- versioned eligibility rules
+- KYC-gated submission and reviewer assignment
+- structured `409 Conflict` and `422 Unprocessable Entity` workflow errors
+- secured Angular operator console with visible workflow blockers
+- structured logging and correlation-aware lifecycle actions
+- ExternalSecret-backed runtime configuration and local-profile-gated bootstrap users
+
+## Normal operating posture
+- Use `admin` for platform administration.
+- Use `officer` for borrower and application operations.
+- Use `reviewer` for review and decision workflows.
+- Use `borrower` for self-service viewing where permitted.
+
+## Key surfaces
+- Borrower and KYC APIs: `/api/v1/borrowers`
+- Eligibility APIs: `/api/v1/eligibility` and `/api/v1/eligibility-rules`
+- Application workflow APIs: `/api/v1/loan-applications`
+- Accounts and servicing APIs: `/api/v1/loan-accounts`
+- Reports: `/api/v1/reports/disbursements`
+
+## What to watch
+- Applications blocked by incomplete KYC
+- `409 Conflict` from concurrent application updates
+- `422 Unprocessable Entity` from business-rule violations
+- Eligibility rule version changes
+- Dashboard/report latency
+- Disbursement and repayment workflow failures
+
+## KYC and submit blocker handling
+1. Check the application and borrower document state in the UI.
+2. Confirm the missing required document type before retrying submit or reviewer assignment.
+3. Do not bypass the blocker in the UI or API.
+4. Reload the application if a `409 Conflict` indicates another operator changed state.
+
+## Eligibility rule change handling
+1. Verify the new rule version in the eligibility rule list.
+2. Confirm the operator console is showing the current rule state.
+3. Re-run eligibility evaluation after the policy change is deployed.
+4. Preserve the old rule version in audit/history for traceability.
+
+## Incident checklist
+- Preserve correlation IDs and request IDs before any remediation.
+- Do not mutate historical approval or disbursement decisions to hide a workflow error.
+- Escalate to the workflow owner if a business-rule change causes widespread `422` responses.
+- Treat unexpected `409 Conflict` spikes as a sign of concurrent operator activity or stale UI state.
+
+## Deployment posture
+- Production expects connection settings and JWT secrets from the cluster secret store, not committed YAML values.
+- The backend is deployed as a two-replica rolling update target.
+- The in-repo MySQL manifest is for local or integration use; production should point at a managed HA MySQL service.
+
+## Local verification
+- Backend: `mvn clean test`
+- Frontend: `npm run build`
+- Full stack: `docker compose up -d --build`

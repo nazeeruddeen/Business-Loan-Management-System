@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 @Builder
 public record EligibilityRuleResponse(
         Long id,
+        Long version,
         String ruleCode,
         String ruleExpression,
         EligibilityRuleType ruleType,

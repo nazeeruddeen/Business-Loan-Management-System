@@ -32,6 +32,7 @@ import {
   LoanApplicationResponse,
   LoanProductResponse,
   LoginRequest,
+  PagedResponse,
   PaymentMode,
   RecordRepaymentRequest,
   UpdateBorrowerDocumentStatusRequest,
@@ -99,10 +100,11 @@ export class AppComponent implements OnInit {
   selectedApplication: LoanApplicationResponse | null = null;
   selectedAccount: LoanAccountResponse | null = null;
   reportPage = 0;
+  readonly listPageSize = 20;
 
   authForm = this.fb.group<any>({
-    username: ['admin', [Validators.required]],
-    password: ['Admin@123', [Validators.required]]
+    username: ['', [Validators.required]],
+    password: ['', [Validators.required]]
   });
 
   borrowerSearchForm = this.fb.group<any>({
@@ -289,7 +291,7 @@ export class AppComponent implements OnInit {
       borrowers: this.api.borrowers(this.borrowerFilters()),
       products: this.api.loanProducts(this.productFilters()),
       applications: this.api.applications(this.applicationFilters()),
-      accounts: this.api.loanAccounts(),
+      accounts: this.api.loanAccounts(0, this.listPageSize),
       rules: this.api.eligibilityRules(),
       reviewers: reviewers$,
       report: this.api.report(this.reportFilters(), this.reportPage, this.reportPageSize)
@@ -298,21 +300,21 @@ export class AppComponent implements OnInit {
         this.currentUser = me;
         this.authSession.setUserInfo(me);
         this.summary = summary;
-        this.borrowers = borrowers;
+        this.borrowers = borrowers.items;
         this.loanProducts = products;
-        this.applications = applications;
-        this.accounts = accounts;
+        this.applications = applications.items;
+        this.accounts = accounts.items;
         this.rules = rules;
         this.reviewers = reviewers.filter((user) => user.role === 'REVIEWER' && user.active);
         this.report = report;
 
-        const borrowerId = resetSelections ? borrowers[0]?.id : this.selectedBorrower?.id ?? borrowers[0]?.id;
-        const applicationId = resetSelections ? applications[0]?.id : this.selectedApplication?.id ?? applications[0]?.id;
-        const accountId = resetSelections ? accounts[0]?.id : this.selectedAccount?.id ?? accounts[0]?.id;
+        const borrowerId = resetSelections ? borrowers.items[0]?.id : this.selectedBorrower?.id ?? borrowers.items[0]?.id;
+        const applicationId = resetSelections ? applications.items[0]?.id : this.selectedApplication?.id ?? applications.items[0]?.id;
+        const accountId = resetSelections ? accounts.items[0]?.id : this.selectedAccount?.id ?? accounts.items[0]?.id;
 
-        this.selectedBorrower = borrowers.find((item) => item.id === borrowerId) ?? borrowers[0] ?? null;
-        this.selectedApplication = applications.find((item) => item.id === applicationId) ?? applications[0] ?? null;
-        this.selectedAccount = accounts.find((item) => item.id === accountId) ?? accounts[0] ?? null;
+        this.selectedBorrower = borrowers.items.find((item) => item.id === borrowerId) ?? borrowers.items[0] ?? null;
+        this.selectedApplication = applications.items.find((item) => item.id === applicationId) ?? applications.items[0] ?? null;
+        this.selectedAccount = accounts.items.find((item) => item.id === accountId) ?? accounts.items[0] ?? null;
 
         if (this.selectedBorrower) {
           this.loadBorrowerDocuments(this.selectedBorrower.id);
@@ -343,14 +345,14 @@ export class AppComponent implements OnInit {
   searchBorrowers(): void {
     this.api.borrowers(this.borrowerFilters()).subscribe({
       next: (borrowers) => {
-        this.borrowers = borrowers;
-        if (borrowers.length) {
-          this.selectBorrower(borrowers[0]);
+        this.borrowers = borrowers.items;
+        if (borrowers.items.length) {
+          this.selectBorrower(borrowers.items[0]);
         } else {
           this.selectedBorrower = null;
           this.borrowerDocuments = [];
         }
-        this.notice = { kind: 'info', text: `Loaded ${borrowers.length} borrower record(s).` };
+        this.notice = { kind: 'info', text: `Loaded ${borrowers.items.length} borrower record(s) from ${borrowers.totalElements} total.` };
       },
       error: (error) => this.handleError(error, 'Unable to load borrowers')
     });
@@ -369,13 +371,13 @@ export class AppComponent implements OnInit {
   searchApplications(): void {
     this.api.applications(this.applicationFilters()).subscribe({
       next: (applications) => {
-        this.applications = applications;
-        if (applications.length) {
-          this.selectApplication(applications[0]);
+        this.applications = applications.items;
+        if (applications.items.length) {
+          this.selectApplication(applications.items[0]);
         } else {
           this.selectedApplication = null;
         }
-        this.notice = { kind: 'info', text: `Loaded ${applications.length} application record(s).` };
+        this.notice = { kind: 'info', text: `Loaded ${applications.items.length} application record(s) from ${applications.totalElements} total.` };
       },
       error: (error) => this.handleError(error, 'Unable to load applications')
     });
@@ -716,6 +718,55 @@ export class AppComponent implements OnInit {
     return value.replace(/_/g, ' ');
   }
 
+  workflowBlockers(application: LoanApplicationResponse | null): string[] {
+    if (!application) {
+      return [];
+    }
+
+    const blockers: string[] = [];
+    if (!application.borrowerKycComplete) {
+      const missing = application.missingRequiredDocuments.length
+        ? `Missing verified documents: ${application.missingRequiredDocuments.join(', ')}`
+        : 'KYC is incomplete';
+      blockers.push(missing);
+    }
+    if (!application.eligibilityPassed) {
+      blockers.push(application.eligibilitySummary || 'Eligibility checks have failed');
+    }
+    return blockers;
+  }
+
+  workflowStatusLabel(application: LoanApplicationResponse | null): string {
+    if (!application) {
+      return 'No application selected';
+    }
+    const blockers = this.workflowBlockers(application);
+    if (!blockers.length) {
+      return 'Ready for workflow progression';
+    }
+    return 'Workflow blocked';
+  }
+
+  workflowStatusTone(application: LoanApplicationResponse | null): NoticeKind {
+    if (!application) {
+      return 'info';
+    }
+    return this.workflowBlockers(application).length ? 'warning' : 'success';
+  }
+
+  canSubmit(application: LoanApplicationResponse | null): boolean {
+    return !!application
+      && application.status === 'DRAFT'
+      && application.borrowerKycComplete
+      && application.eligibilityPassed;
+  }
+
+  canAssignReviewer(application: LoanApplicationResponse | null): boolean {
+    return !!application
+      && application.status === 'SUBMITTED'
+      && application.borrowerKycComplete;
+  }
+
   kycBadgeKind(borrower: BorrowerResponse | null): NoticeKind {
     if (!borrower) {
       return 'info';
@@ -779,8 +830,8 @@ export class AppComponent implements OnInit {
   private reloadBorrowersAndDocuments(borrowerId: number, successText: string): void {
     this.api.borrowers(this.borrowerFilters()).subscribe({
       next: (borrowers) => {
-        this.borrowers = borrowers;
-        const match = borrowers.find((item) => item.id === borrowerId);
+        this.borrowers = borrowers.items;
+        const match = borrowers.items.find((item) => item.id === borrowerId);
         if (match) {
           this.selectedBorrower = match;
           this.loadBorrowerDocuments(match.id);
@@ -792,9 +843,9 @@ export class AppComponent implements OnInit {
   }
 
   private reloadAccounts(applicationId?: number): void {
-    this.api.loanAccounts().subscribe({
+    this.api.loanAccounts(0, this.listPageSize).subscribe({
       next: (accounts) => {
-        this.accounts = accounts;
+        this.accounts = accounts.items;
         if (applicationId) {
           this.api.loanAccountByApplication(applicationId).subscribe({
             next: (account) => this.selectAccount(account),
@@ -804,7 +855,7 @@ export class AppComponent implements OnInit {
         }
 
         const selectedId = this.selectedAccount?.id;
-        const match = accounts.find((item) => item.id === selectedId) ?? accounts[0] ?? null;
+        const match = accounts.items.find((item) => item.id === selectedId) ?? accounts.items[0] ?? null;
         if (match) {
           this.selectAccount(match);
         } else {
@@ -854,11 +905,13 @@ export class AppComponent implements OnInit {
     });
   }
 
-  private borrowerFilters(): { businessPan?: string; businessName?: string } {
+  private borrowerFilters(): { businessPan?: string; businessName?: string; page: number; size: number } {
     const value = this.borrowerSearchForm.getRawValue() as Record<string, string>;
     return {
       businessPan: value['businessPan'] || undefined,
-      businessName: value['businessName'] || undefined
+      businessName: value['businessName'] || undefined,
+      page: 0,
+      size: this.listPageSize
     };
   }
 
@@ -872,10 +925,12 @@ export class AppComponent implements OnInit {
     };
   }
 
-  private applicationFilters(): { status?: string | null } {
+  private applicationFilters(): { status?: string | null; page: number; size: number } {
     const value = this.applicationSearchForm.getRawValue() as Record<string, string>;
     return {
-      status: value['status'] || undefined
+      status: value['status'] || undefined,
+      page: 0,
+      size: this.listPageSize
     };
   }
 
@@ -913,6 +968,22 @@ export class AppComponent implements OnInit {
     const detail = typeof apiError === 'string'
       ? apiError
       : apiError?.message || httpError?.message || fallbackText;
+
+    if (httpError?.status === 409) {
+      this.notice = {
+        kind: 'warning',
+        text: `Concurrent update detected (409 Conflict). ${detail} Reload the application and retry the action.`
+      };
+      return;
+    }
+
+    if (httpError?.status === 422) {
+      this.notice = {
+        kind: 'warning',
+        text: `Workflow blocked by business rules (422 Unprocessable Entity). ${detail}`
+      };
+      return;
+    }
 
     this.notice = { kind: 'danger', text: `${fallbackText}. ${detail}` };
   }

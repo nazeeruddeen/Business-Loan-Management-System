@@ -11,11 +11,11 @@
       <form class="form" [formGroup]="authForm">
         <label>
           Username
-          <input type="text" formControlName="username" placeholder="admin">
+          <input type="text" formControlName="username" placeholder="operator username">
         </label>
         <label>
           Password
-          <input type="password" formControlName="password" placeholder="Admin@123">
+          <input type="password" formControlName="password" placeholder="provisioned password">
         </label>
         <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping">
           {{ actionBusy === 'login' ? 'Signing in...' : 'Sign in' }}
@@ -23,8 +23,8 @@
       </form>
 
       <div class="seeded-users">
-        <span>Seeded users:</span>
-        <small>admin / Admin&#64;123, officer / Officer&#64;123, reviewer / Reviewer&#64;123</small>
+        <span>Operator access:</span>
+        <small>Local bootstrap users are available only when the `local` profile is enabled and credentials are supplied through environment variables.</small>
       </div>
 
       <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
@@ -265,9 +265,24 @@
                   </span>
                 </div>
                 <p>{{ selectedBorrower.contactPersonName }} · {{ selectedBorrower.email }}</p>
-                <small *ngIf="selectedBorrower.kycSummary.missingRequiredDocuments.length">
+              <small *ngIf="selectedBorrower.kycSummary.missingRequiredDocuments.length">
                   Missing: {{ selectedBorrower.kycSummary.missingRequiredDocuments.join(', ') }}
                 </small>
+              </div>
+
+              <div class="selected">
+                <div class="selected__header">
+                  <strong>{{ selectedBorrower.kycSummary.kycComplete ? 'KYC ready for workflow' : 'KYC blocks workflow' }}</strong>
+                  <span class="chip" [attr.data-kind]="selectedBorrower.kycSummary.kycComplete ? 'success' : 'warning'">
+                    {{ selectedBorrower.kycSummary.kycComplete ? 'Ready' : 'Blocked' }}
+                  </span>
+                </div>
+                <p *ngIf="selectedBorrower.kycSummary.kycComplete">
+                  All required documents are verified for this borrower.
+                </p>
+                <p *ngIf="!selectedBorrower.kycSummary.kycComplete">
+                  Missing verified documents: {{ selectedBorrower.kycSummary.missingRequiredDocuments.join(', ') }}
+                </p>
               </div>
 
               <form class="form" [formGroup]="documentForm">
@@ -439,6 +454,14 @@
               <small>Tenure {{ product.tenureMonths }} months · {{ product.active ? 'Active' : 'Inactive' }}</small>
             </article>
           </div>
+
+          <div class="list">
+            <article class="list-card" *ngFor="let rule of rules">
+              <strong>{{ rule.ruleCode }}</strong>
+              <span>v{{ rule.version }} Â· {{ rule.ruleType }}</span>
+              <small>{{ rule.ruleExpression }}</small>
+            </article>
+          </div>
         </article>
 
         <article class="panel animated-panel" *ngIf="activeTab === 'applications'">
@@ -534,6 +557,9 @@
                 <span class="chip" [attr.data-kind]="application.borrowerKycComplete ? 'success' : 'warning'">
                   {{ application.borrowerKycComplete ? 'KYC ready' : 'KYC incomplete' }}
                 </span>
+                <span class="chip" [attr.data-kind]="application.eligibilityPassed ? 'success' : 'danger'">
+                  {{ application.eligibilityPassed ? 'Eligibility passed' : 'Eligibility blocked' }}
+                </span>
               </div>
             </article>
           </div>
@@ -554,10 +580,25 @@
             <small>KYC ready: {{ selectedApplication.borrowerKycComplete ? 'Yes' : 'No' }}</small>
           </div>
 
+          <div class="selected">
+            <div class="selected__header">
+              <strong>{{ workflowStatusLabel(selectedApplication) }}</strong>
+              <span class="chip" [attr.data-kind]="workflowStatusTone(selectedApplication)">
+                {{ workflowBlockers(selectedApplication).length ? 'Blocked' : 'Ready' }}
+              </span>
+            </div>
+            <p *ngIf="workflowBlockers(selectedApplication).length; else readyToProceed">
+              {{ workflowBlockers(selectedApplication).join(' | ') }}
+            </p>
+            <ng-template #readyToProceed>
+              <p>This application can move through the workflow without KYC or eligibility blockers.</p>
+            </ng-template>
+          </div>
+
           <div class="split-grid">
             <form class="form" [formGroup]="reviewerForm">
               <div class="section-subtitle">Submission and reviewer assignment</div>
-              <button type="button" class="secondary" (click)="submitApplication()" [disabled]="!selectedApplication || actionBusy === 'submitApplication'">
+              <button type="button" class="secondary" (click)="submitApplication()" [disabled]="!canSubmit(selectedApplication) || actionBusy === 'submitApplication'">
                 {{ actionBusy === 'submitApplication' ? 'Submitting...' : 'Submit application' }}
               </button>
               <label>
@@ -569,7 +610,7 @@
                   </option>
                 </select>
               </label>
-              <button type="button" class="secondary" (click)="assignReviewer()" [disabled]="!selectedApplication || actionBusy === 'assignReviewer'">
+              <button type="button" class="secondary" (click)="assignReviewer()" [disabled]="!canAssignReviewer(selectedApplication) || actionBusy === 'assignReviewer'">
                 {{ actionBusy === 'assignReviewer' ? 'Assigning...' : 'Assign reviewer' }}
               </button>
             </form>
