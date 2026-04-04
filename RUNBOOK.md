@@ -3,6 +3,8 @@
 This runbook matches the current production hardening in the codebase:
 - versioned eligibility rules
 - KYC-gated submission and reviewer assignment
+- borrower update flow with paginated search surfaces
+- repayment servicing with principal-curtailment prepayment support
 - structured `409 Conflict` and `422 Unprocessable Entity` workflow errors
 - secured Angular operator console with visible workflow blockers
 - structured logging and correlation-aware lifecycle actions
@@ -28,6 +30,7 @@ This runbook matches the current production hardening in the codebase:
 - Eligibility rule version changes
 - Dashboard/report latency
 - Disbursement and repayment workflow failures
+- unexpected prepayment or schedule-recast behavior
 
 ## KYC and submit blocker handling
 1. Check the application and borrower document state in the UI.

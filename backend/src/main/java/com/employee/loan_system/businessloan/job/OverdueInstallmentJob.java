@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Scheduled job that detects overdue repayment installments.
@@ -43,12 +42,7 @@ public class OverdueInstallmentJob {
         LocalDate today = LocalDate.now();
         log.info("OverdueInstallmentJob started for date={}", today);
 
-        List<RepaymentInstallment> allInstallments = installmentRepository.findAll();
-        List<RepaymentInstallment> toMark = allInstallments.stream()
-                .filter(i -> i.getStatus() == InstallmentStatus.PENDING
-                        && i.getDueDate() != null
-                        && i.getDueDate().isBefore(today))
-                .collect(Collectors.toList());
+        List<RepaymentInstallment> toMark = installmentRepository.findByStatusAndDueDateBefore(InstallmentStatus.PENDING, today);
 
         if (toMark.isEmpty()) {
             log.info("OverdueInstallmentJob: no installments to mark as overdue");

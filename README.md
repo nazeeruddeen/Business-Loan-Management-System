@@ -20,7 +20,7 @@ It demonstrates:
 
 ## Tech Stack
 
-- Java 17
+- Java 21
 - Spring Boot 3.2
 - Spring Data JPA / Hibernate
 - MySQL
@@ -75,16 +75,18 @@ docker compose up -d --build
 
 ## Main Workflow
 
-1. Sign in from the Angular console using a seeded user.
+1. Sign in from the Angular console using a provisioned account or a local bootstrap user.
 2. Create a borrower with address details.
-3. Upload borrower document metadata and mark required documents as verified.
-4. Run eligibility evaluation.
-5. Create a draft loan application.
-6. Submit the application after KYC is complete. If KYC or eligibility fails, the console now shows a workflow blocker instead of a generic failure.
-7. Assign a reviewer.
-8. Approve or reject the application.
-9. Disburse the approved application.
-10. Record repayments and review dashboard/report updates.
+3. Update borrower details when business or contact data changes.
+4. Upload borrower document metadata and mark required documents as verified.
+5. Run eligibility evaluation.
+6. Create a draft loan application.
+7. Submit the application after KYC is complete. If KYC or eligibility fails, the console now shows a workflow blocker instead of a generic failure.
+8. Assign a reviewer.
+9. Approve or reject the application.
+10. Disburse the approved application.
+11. Record scheduled repayments, excess repayments, and principal-curtailment prepayments through the servicing workflow.
+12. Review dashboard and disbursement reporting updates.
 
 ## Production deployment posture
 

@@ -22,8 +22,11 @@ Authentication base path: `/auth`
 ## Borrowers
 
 - `POST /borrowers`
+- `PATCH /borrowers/{borrowerId}`
 - `GET /borrowers/{borrowerId}`
 - `GET /borrowers?businessPan=&businessName=`
+
+Borrower search returns a paginated response shape with `content`, `number`, `size`, `totalElements`, and `totalPages`.
 
 ## Borrower KYC Documents
 
@@ -66,6 +69,8 @@ Eligibility rules are versioned in the database so policy changes remain auditab
 - `GET /loan-applications/{applicationId}`
 - `GET /loan-applications?status=`
 
+Loan application search returns a paginated response shape with `content`, `number`, `size`, `totalElements`, and `totalPages`.
+
 Workflow notes:
 
 - submission fails if eligibility is not passed
@@ -88,6 +93,14 @@ Operational note:
 - `GET /loan-accounts`
 - `POST /loan-accounts/{accountId}/repayments`
 - `GET /loan-accounts/dashboard`
+
+Loan account search returns a paginated response shape with `content`, `number`, `size`, `totalElements`, and `totalPages`.
+
+Repayment servicing notes:
+
+- repayments apply interest first, then scheduled principal
+- excess amount beyond currently due installments is applied as principal curtailment when outstanding principal remains
+- principal prepayment triggers installment recast instead of being rejected as an overpayment
 
 ## Reports
 

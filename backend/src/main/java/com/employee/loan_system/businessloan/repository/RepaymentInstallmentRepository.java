@@ -13,6 +13,8 @@ public interface RepaymentInstallmentRepository extends JpaRepository<RepaymentI
 
     List<RepaymentInstallment> findByLoanAccount_IdOrderByInstallmentNumberAsc(Long loanAccountId);
 
+    List<RepaymentInstallment> findByStatusAndDueDateBefore(InstallmentStatus status, LocalDate dueDate);
+
     @Query("select count(i) from RepaymentInstallment i where i.status = :status")
     long countByStatus(@Param("status") InstallmentStatus status);
 

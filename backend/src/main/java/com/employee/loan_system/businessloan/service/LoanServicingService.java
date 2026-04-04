@@ -173,7 +173,7 @@ public class LoanServicingService {
         transaction.setInstallment(firstTouchedInstallment);
         account.addTransaction(transaction);
 
-        loanAccountRepository.save(account);
+        loanAccountRepository.saveAndFlush(account);
         return toTransactionResponse(transaction);
     }
 

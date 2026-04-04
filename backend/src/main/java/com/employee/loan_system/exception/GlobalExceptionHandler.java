@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -66,6 +67,17 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(
                 baseError(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request.getRequestURI()),
                 HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleOptimisticLockingFailure(
+            ObjectOptimisticLockingFailureException ex,
+            HttpServletRequest request) {
+        return new ResponseEntity<>(
+                baseError(HttpStatus.CONFLICT,
+                        "The resource was updated by another request. Reload the latest state and retry.",
+                        request.getRequestURI()),
+                HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

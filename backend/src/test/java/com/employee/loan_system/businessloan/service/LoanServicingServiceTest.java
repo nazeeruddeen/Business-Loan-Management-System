@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -31,6 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,7 +57,7 @@ class LoanServicingServiceTest {
     void recordRepaymentShouldCloseFirstInstallment() {
         LoanAccount account = activeAccount();
         when(loanAccountRepository.findById(1L)).thenReturn(Optional.of(account));
-        when(loanAccountRepository.save(any(LoanAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(loanAccountRepository.saveAndFlush(any(LoanAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RecordRepaymentRequest request = new RecordRepaymentRequest();
         request.setAmount(new BigDecimal("47073.00"));
@@ -126,6 +128,7 @@ class LoanServicingServiceTest {
 
         LoanAccount account = new LoanAccount();
         account.setId(1L);
+        account.setVersion(0L);
         account.setLoanApplication(application);
         account.setAccountNumber("BLA-000001");
         account.setPrincipalAmount(new BigDecimal("1000000"));
@@ -142,6 +145,40 @@ class LoanServicingServiceTest {
         account.addInstallment(first);
         account.addInstallment(second);
         return account;
+    }
+
+    @Test
+    void recordRepaymentShouldFlushAccountChanges() {
+        LoanAccount account = activeAccount();
+        when(loanAccountRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(loanAccountRepository.saveAndFlush(any(LoanAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RecordRepaymentRequest request = new RecordRepaymentRequest();
+        request.setAmount(new BigDecimal("47073.00"));
+        request.setPaymentMode(PaymentMode.NEFT);
+        request.setTransactionReference("TXN-FLUSH");
+        request.setPaymentDate(LocalDate.now());
+
+        loanServicingService.recordRepayment(1L, request);
+
+        verify(loanAccountRepository).saveAndFlush(any(LoanAccount.class));
+    }
+
+    @Test
+    void recordRepaymentShouldSurfaceOptimisticLockConflicts() {
+        LoanAccount account = activeAccount();
+        when(loanAccountRepository.findById(1L)).thenReturn(Optional.of(account));
+        when(loanAccountRepository.saveAndFlush(any(LoanAccount.class)))
+                .thenThrow(new ObjectOptimisticLockingFailureException(LoanAccount.class, 1L));
+
+        RecordRepaymentRequest request = new RecordRepaymentRequest();
+        request.setAmount(new BigDecimal("47073.00"));
+        request.setPaymentMode(PaymentMode.NEFT);
+        request.setTransactionReference("TXN-CONFLICT");
+        request.setPaymentDate(LocalDate.now());
+
+        assertThatThrownBy(() -> loanServicingService.recordRepayment(1L, request))
+                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
     }
 
     private RepaymentInstallment installment(int number, String principalDue, String interestDue, LocalDate dueDate) {
