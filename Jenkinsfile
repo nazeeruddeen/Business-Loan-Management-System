@@ -7,7 +7,8 @@ pipeline {
     }
 
     environment {
-        APP_NAME            = 'business-loan-management-system'
+        BACKEND_IMAGE       = 'business-loan-management-system'
+        FRONTEND_IMAGE      = 'business-loan-management-system-frontend'
         IMAGE_TAG           = "${env.BUILD_NUMBER ?: 'latest'}"
         DOCKER_REGISTRY_URL = "${env.DOCKER_REGISTRY_URL ?: ''}"
     }
@@ -17,14 +18,6 @@ pipeline {
             steps {
                 checkout scm
                 echo "Building branch: ${env.BRANCH_NAME ?: 'unknown'}, commit: ${env.GIT_COMMIT ?: 'unknown'}"
-            }
-        }
-
-        stage('Build') {
-            steps {
-                dir('backend') {
-                    sh 'mvn -B -DskipTests package'
-                }
             }
         }
 
@@ -41,10 +34,20 @@ pipeline {
             }
         }
 
+        stage('Package') {
+            steps {
+                dir('backend') {
+                    sh 'mvn -B -DskipTests package'
+                }
+            }
+        }
+
         stage('Docker Build') {
             steps {
-                sh "docker build -t ${APP_NAME}:${IMAGE_TAG} -f backend/Dockerfile backend"
-                sh "docker tag ${APP_NAME}:${IMAGE_TAG} ${APP_NAME}:latest"
+                sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} -f backend/Dockerfile backend"
+                sh "docker tag ${BACKEND_IMAGE}:${IMAGE_TAG} ${BACKEND_IMAGE}:latest"
+                sh "docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} -f frontend/Dockerfile frontend"
+                sh "docker tag ${FRONTEND_IMAGE}:${IMAGE_TAG} ${FRONTEND_IMAGE}:latest"
             }
         }
 
@@ -58,8 +61,14 @@ pipeline {
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_PASS')]) {
                     sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin ${DOCKER_REGISTRY_URL}"
-                    sh "docker tag ${APP_NAME}:${IMAGE_TAG} ${DOCKER_REGISTRY_URL}/${APP_NAME}:${IMAGE_TAG}"
-                    sh "docker push ${DOCKER_REGISTRY_URL}/${APP_NAME}:${IMAGE_TAG}"
+                    sh "docker tag ${BACKEND_IMAGE}:${IMAGE_TAG} ${DOCKER_REGISTRY_URL}/${BACKEND_IMAGE}:${IMAGE_TAG}"
+                    sh "docker push ${DOCKER_REGISTRY_URL}/${BACKEND_IMAGE}:${IMAGE_TAG}"
+                    sh "docker tag ${BACKEND_IMAGE}:latest ${DOCKER_REGISTRY_URL}/${BACKEND_IMAGE}:latest"
+                    sh "docker push ${DOCKER_REGISTRY_URL}/${BACKEND_IMAGE}:latest"
+                    sh "docker tag ${FRONTEND_IMAGE}:${IMAGE_TAG} ${DOCKER_REGISTRY_URL}/${FRONTEND_IMAGE}:${IMAGE_TAG}"
+                    sh "docker push ${DOCKER_REGISTRY_URL}/${FRONTEND_IMAGE}:${IMAGE_TAG}"
+                    sh "docker tag ${FRONTEND_IMAGE}:latest ${DOCKER_REGISTRY_URL}/${FRONTEND_IMAGE}:latest"
+                    sh "docker push ${DOCKER_REGISTRY_URL}/${FRONTEND_IMAGE}:latest"
                 }
             }
         }
@@ -72,8 +81,12 @@ pipeline {
                 sh 'kubectl apply -f k8s/00-namespace.yaml'
                 sh 'kubectl apply -f k8s/01-configmap.yaml'
                 sh 'kubectl apply -f k8s/02-secret.yaml'
+                sh 'kubectl apply -f k8s/03-mysql.yaml'
                 sh 'kubectl apply -f k8s/04-backend.yaml'
+                sh 'kubectl apply -f k8s/05-redis.yaml'
+                sh 'kubectl apply -f k8s/06-frontend.yaml'
                 sh 'kubectl rollout status deployment/business-loan-backend -n business-loan --timeout=180s'
+                sh 'kubectl rollout status deployment/business-loan-frontend -n business-loan --timeout=180s'
             }
         }
     }
@@ -83,7 +96,7 @@ pipeline {
             echo "Pipeline failed! Check logs for details."
         }
         success {
-            echo "Deploy of ${APP_NAME}:${IMAGE_TAG} succeeded."
+            echo "Deploy of ${BACKEND_IMAGE}:${IMAGE_TAG} and ${FRONTEND_IMAGE}:${IMAGE_TAG} succeeded."
         }
     }
 }
