@@ -25,6 +25,7 @@ import com.employee.loan_system.entity.AppUser;
 import com.employee.loan_system.entity.UserRole;
 import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Pageable;
 import com.employee.loan_system.repository.AppUserRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -72,6 +73,7 @@ public class LoanApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','BORROWER')")
     public LoanApplicationResponse createDraft(CreateLoanApplicationRequest request) {
         Borrower borrower = borrowerRepository.findById(request.getBorrowerId())
@@ -101,6 +103,7 @@ public class LoanApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','BORROWER')")
     public LoanApplicationResponse submit(Long applicationId) {
         LoanApplication application = findApplication(applicationId);
@@ -119,6 +122,7 @@ public class LoanApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     public LoanApplicationResponse assignReviewer(Long applicationId, AssignReviewerRequest request) {
         LoanApplication application = findApplication(applicationId);
@@ -143,6 +147,7 @@ public class LoanApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
     public LoanApplicationResponse decide(Long applicationId, ApplicationDecisionRequest request) {
         LoanApplication application = findApplication(applicationId);
@@ -170,6 +175,7 @@ public class LoanApplicationService {
     }
 
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     public LoanApplicationResponse disburse(Long applicationId, DisburseLoanRequest request) {
         LoanApplication application = findApplication(applicationId);

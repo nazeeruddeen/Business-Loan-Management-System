@@ -18,6 +18,8 @@ import com.employee.loan_system.businessloan.repository.LoanRepaymentTransaction
 import com.employee.loan_system.businessloan.repository.RepaymentInstallmentRepository;
 import com.employee.loan_system.exception.BusinessRuleException;
 import com.employee.loan_system.exception.ResourceNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -73,6 +75,7 @@ public class LoanServicingService {
     }
 
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER')")
     public LoanRepaymentTransactionResponse recordRepayment(Long accountId, RecordRepaymentRequest request) {
         LoanAccount account = loanAccountRepository.findById(accountId)
@@ -178,6 +181,7 @@ public class LoanServicingService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "businessLoanDashboard")
     @PreAuthorize("hasAnyRole('ADMIN','LOAN_OFFICER','REVIEWER')")
     public BusinessLoanDashboardResponse getDashboard() {
         long totalApplications = loanApplicationRepository.count();

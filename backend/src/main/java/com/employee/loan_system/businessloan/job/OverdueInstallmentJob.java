@@ -5,6 +5,7 @@ import com.employee.loan_system.businessloan.entity.RepaymentInstallment;
 import com.employee.loan_system.businessloan.repository.RepaymentInstallmentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class OverdueInstallmentJob {
      */
     @Scheduled(cron = "${app.jobs.overdue-detection.cron:0 30 0 * * *}")
     @Transactional
+    @CacheEvict(value = "businessLoanDashboard", allEntries = true)
     public void markOverdueInstallments() {
         LocalDate today = LocalDate.now();
         log.info("OverdueInstallmentJob started for date={}", today);

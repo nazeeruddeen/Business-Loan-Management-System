@@ -85,6 +85,7 @@ pipeline {
                 sh 'kubectl apply -f k8s/04-backend.yaml'
                 sh 'kubectl apply -f k8s/05-redis.yaml'
                 sh 'kubectl apply -f k8s/06-frontend.yaml'
+                sh 'kubectl apply -f k8s/07-ingress.yaml'
                 sh 'kubectl rollout status deployment/business-loan-backend -n business-loan --timeout=180s'
                 sh 'kubectl rollout status deployment/business-loan-frontend -n business-loan --timeout=180s'
             }
