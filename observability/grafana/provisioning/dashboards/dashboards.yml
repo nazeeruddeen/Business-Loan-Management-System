@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: business-loan-dashboards
+    orgId: 1
+    folder: Business Loan
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,4 +1,4 @@
-<ng-container *ngIf="!isAuthenticated; else workspace">
+﻿<ng-container *ngIf="!isAuthenticated; else workspace">
   <div class="login-shell">
     <section class="login-panel">
       <div class="eyebrow">Secure operator access</div>
@@ -8,16 +8,16 @@
         <strong>{{ apiBaseUrl }}</strong>.
       </p>
 
-      <form class="form" [formGroup]="authForm">
+      <form class="form" [formGroup]="authForm" data-testid="business-login-form">
         <label>
           Username
-          <input type="text" formControlName="username" placeholder="operator username">
+          <input type="text" formControlName="username" placeholder="operator username" data-testid="business-login-username">
         </label>
         <label>
           Password
-          <input type="password" formControlName="password" placeholder="provisioned password">
+          <input type="password" formControlName="password" placeholder="provisioned password" data-testid="business-login-password">
         </label>
-        <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping">
+        <button type="button" class="primary" (click)="login()" [disabled]="actionBusy === 'login' || bootstrapping" data-testid="business-login-submit">
           {{ actionBusy === 'login' ? 'Signing in...' : 'Sign in' }}
         </button>
       </form>
@@ -27,7 +27,7 @@
         <small>Local bootstrap users are available only when the `local` profile is enabled and credentials are supplied through environment variables.</small>
       </div>
 
-      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+      <div class="status" [attr.data-kind]="notice.kind" data-testid="business-notice">{{ notice.text }}</div>
     </section>
   </div>
 </ng-container>
@@ -39,17 +39,17 @@
         <div class="logo-icon"></div>
         <div>
           <h2>BizLoan</h2>
-          <small>{{ currentUser?.username }} � {{ currentUser?.role }}</small>
+          <small>{{ currentUser?.username }} · {{ currentUser?.role }}</small>
         </div>
       </div>
 
       <nav class="sidebar__nav">
-        <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')">Overview</button>
-        <button [class.active]="activeTab === 'borrowers'" (click)="setTab('borrowers')">Borrowers & KYC</button>
-        <button [class.active]="activeTab === 'products'" (click)="setTab('products')">Products</button>
-        <button [class.active]="activeTab === 'applications'" (click)="setTab('applications')">Applications</button>
-        <button [class.active]="activeTab === 'approval'" (click)="setTab('approval')">Approval</button>
-        <button [class.active]="activeTab === 'servicing'" (click)="setTab('servicing')">Servicing</button>
+        <button [class.active]="activeTab === 'dashboard'" (click)="setTab('dashboard')" data-testid="business-tab-dashboard">Overview</button>
+        <button [class.active]="activeTab === 'borrowers'" (click)="setTab('borrowers')" data-testid="business-tab-borrowers">Borrowers & KYC</button>
+        <button [class.active]="activeTab === 'products'" (click)="setTab('products')" data-testid="business-tab-products">Products</button>
+        <button [class.active]="activeTab === 'applications'" (click)="setTab('applications')" data-testid="business-tab-applications">Applications</button>
+        <button [class.active]="activeTab === 'approval'" (click)="setTab('approval')" data-testid="business-tab-approval">Approval</button>
+        <button [class.active]="activeTab === 'servicing'" (click)="setTab('servicing')" data-testid="business-tab-servicing">Servicing</button>
       </nav>
 
       <button type="button" class="ghost sidebar__logout" (click)="logout()" [disabled]="actionBusy === 'logout'">
@@ -72,7 +72,7 @@
         </div>
       </header>
 
-      <div class="status" [attr.data-kind]="notice.kind">{{ notice.text }}</div>
+      <div class="status" [attr.data-kind]="notice.kind" data-testid="business-notice">{{ notice.text }}</div>
 
       <app-business-dashboard *ngIf="activeTab === 'dashboard'" [summary]="summary"></app-business-dashboard>
 
@@ -161,3 +161,14 @@
     </main>
   </div>
 </ng-template>
+
+
+
+
+
+
+
+
+
+
+

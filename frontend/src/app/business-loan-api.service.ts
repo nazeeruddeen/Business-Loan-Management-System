@@ -48,8 +48,8 @@ export class BusinessLoanApiService {
     return this.http.get<UserInfoResponse>(`${this.serverBaseUrl}/auth/me`);
   }
 
-  logout(refreshToken: string): Observable<void> {
-    return this.http.post<void>(`${this.serverBaseUrl}/auth/logout`, { refreshToken });
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.serverBaseUrl}/auth/logout`, {});
   }
 
   users(): Observable<UserSummaryResponse[]> {
@@ -110,6 +110,10 @@ export class BusinessLoanApiService {
 
   createLoanApplication(payload: CreateLoanApplicationRequest): Observable<LoanApplicationResponse> {
     return this.http.post<LoanApplicationResponse>(this.url('/loan-applications'), payload);
+  }
+
+  getApplication(applicationId: number): Observable<LoanApplicationResponse> {
+    return this.http.get<LoanApplicationResponse>(this.url(`/loan-applications/${applicationId}`));
   }
 
   submitApplication(applicationId: number): Observable<LoanApplicationResponse> {

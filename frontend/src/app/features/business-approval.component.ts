@@ -17,7 +17,7 @@ import { LoanApplicationResponse, UserSummaryResponse } from '../business-loan.m
       <div class="selected" *ngIf="selectedApplication">
         <div class="selected__header">
           <strong>{{ selectedApplication.borrowerName }}</strong>
-          <span>{{ selectedApplication.status }}</span>
+          <span data-testid="business-selected-status">{{ selectedApplication.status }}</span>
         </div>
         <p>{{ selectedApplication.purpose }}</p>
         <small>KYC ready: {{ selectedApplication.borrowerKycComplete ? 'Yes' : 'No' }}</small>
@@ -41,19 +41,19 @@ import { LoanApplicationResponse, UserSummaryResponse } from '../business-loan.m
       <div class="split-grid">
         <form class="form" [formGroup]="reviewerForm">
           <div class="section-subtitle">Submission and reviewer assignment</div>
-          <button type="button" class="secondary" (click)="submitApplication.emit()" [disabled]="!canSubmit(selectedApplication) || actionBusy === 'submitApplication'">
+          <button type="button" class="secondary" (click)="submitApplication.emit()" [disabled]="!canSubmit(selectedApplication) || actionBusy === 'submitApplication'" data-testid="business-submit-application">
             {{ actionBusy === 'submitApplication' ? 'Submitting...' : 'Submit application' }}
           </button>
           <label>
             Reviewer
-            <select formControlName="reviewerUserId">
-              <option [ngValue]="null">Select reviewer</option>
-              <option *ngFor="let reviewer of reviewers" [ngValue]="reviewer.id">
+            <select formControlName="reviewerUserId" data-testid="business-reviewer-select">
+              <option value="">Select reviewer</option>
+              <option *ngFor="let reviewer of reviewers" [value]="reviewer.id">
                 {{ reviewer.username }} ({{ reviewer.role }})
               </option>
             </select>
           </label>
-          <button type="button" class="secondary" (click)="assignReviewer.emit()" [disabled]="!canAssignReviewer(selectedApplication) || actionBusy === 'assignReviewer'">
+          <button type="button" class="secondary" (click)="assignReviewer.emit()" [disabled]="!canAssignReviewer(selectedApplication) || actionBusy === 'assignReviewer'" data-testid="business-assign-reviewer">
             {{ actionBusy === 'assignReviewer' ? 'Assigning...' : 'Assign reviewer' }}
           </button>
         </form>
@@ -64,16 +64,16 @@ import { LoanApplicationResponse, UserSummaryResponse } from '../business-loan.m
             <div class="row">
               <label>
                 Decision
-                <select formControlName="decisionStatus">
+                <select formControlName="decisionStatus" data-testid="business-decision-status">
                   <option *ngFor="let status of decisionStatuses" [value]="status">{{ status }}</option>
                 </select>
               </label>
               <label>
                 Remarks
-                <input type="text" formControlName="remarks">
+                <input type="text" formControlName="remarks" data-testid="business-decision-remarks">
               </label>
             </div>
-            <button type="button" class="secondary" (click)="decideApplication.emit()" [disabled]="!selectedApplication || actionBusy === 'decideApplication'">
+            <button type="button" class="secondary" (click)="decideApplication.emit()" [disabled]="!selectedApplication || actionBusy === 'decideApplication'" data-testid="business-save-decision">
               {{ actionBusy === 'decideApplication' ? 'Saving...' : 'Save decision' }}
             </button>
           </form>

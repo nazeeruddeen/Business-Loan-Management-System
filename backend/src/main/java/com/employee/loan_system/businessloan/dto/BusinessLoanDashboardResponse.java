@@ -2,6 +2,7 @@ package com.employee.loan_system.businessloan.dto;
 
 import lombok.Builder;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Builder
@@ -14,5 +15,5 @@ public record BusinessLoanDashboardResponse(
         BigDecimal totalPrincipalDisbursed,
         BigDecimal totalOutstandingPrincipal,
         BigDecimal totalRepaidAmount
-) {
+) implements Serializable {
 }

@@ -63,6 +63,25 @@ This runbook matches the current production hardening in the codebase:
 - Frontend: `npm run build`
 - Full stack: `docker compose up -d --build`
 
+## Playwright golden path
+- Required env:
+  - `BUSINESS_E2E_PASSWORD`
+  - optional `BUSINESS_E2E_USERNAME` defaults to `admin`
+  - optional `BUSINESS_E2E_BASE_URL` defaults to `http://127.0.0.1:4300`
+  - optional `BUSINESS_E2E_API_BASE_URL` defaults to `http://127.0.0.1:8010`
+- Start the local stack first with `docker compose up -d --build`.
+- Then run `.\node_modules\.bin\playwright.cmd test` from `frontend`.
+- The golden path covers login, borrower onboarding, KYC verification, loan application creation, reviewer assignment, and approval.
+
+## Local observability
+- Start the monitoring stack from `observability` with `docker compose up -d`.
+- Prometheus: [http://localhost:9091](http://localhost:9091)
+- Grafana: [http://localhost:3001](http://localhost:3001)
+- Default Grafana credentials:
+  - username `admin`
+  - password `admin`
+- The provisioned dashboard scrapes `host.docker.internal:8010/actuator/prometheus`.
+
 ## Minikube smoke deployment
 - Build unique images such as `business-loan-management-system:smoke-1` and
   `business-loan-management-system-frontend:smoke-1`.

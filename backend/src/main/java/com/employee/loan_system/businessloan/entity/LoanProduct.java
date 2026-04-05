@@ -1,6 +1,8 @@
 package com.employee.loan_system.businessloan.entity;
 
+import com.employee.loan_system.businessloan.persistence.JsonStringAttributeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,6 +48,7 @@ public class LoanProduct {
     @Column(name = "tenure_months", nullable = false)
     private Integer tenureMonths;
 
+    @Convert(converter = JsonStringAttributeConverter.class)
     @Column(name = "eligibility_criteria", columnDefinition = "json")
     private String eligibilityCriteria;
 

@@ -6,6 +6,25 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
 import { AuthSessionService } from './auth-session.service';
 import { BusinessLoanApiService } from './business-loan-api.service';
+import {
+  buildBusinessApplicationForm,
+  buildBusinessApplicationSearchForm,
+  buildBusinessAuthForm,
+  buildBusinessBorrowerForm,
+  buildBusinessBorrowerSearchForm,
+  buildBusinessDecisionForm,
+  buildBusinessDisbursementForm,
+  buildBusinessDocumentForm,
+  buildBusinessDocumentReviewForm,
+  buildBusinessEligibilityForm,
+  buildBusinessLoanProductForm,
+  buildBusinessLoanProductSearchForm,
+  buildBusinessRepaymentForm,
+  buildBusinessReportForm,
+  buildBusinessReviewerForm,
+  buildBusinessRuleForm,
+  createBusinessAddressGroup
+} from './business-workspace.forms';
 import { BusinessApprovalComponent } from './features/business-approval.component';
 import { BusinessApplicationsComponent } from './features/business-applications.component';
 import { BusinessBorrowersComponent } from './features/business-borrowers.component';
@@ -115,117 +134,26 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
   selectedBorrower: BorrowerResponse | null = null;
   selectedApplication: LoanApplicationResponse | null = null;
   selectedAccount: LoanAccountResponse | null = null;
+  private routeSelectedApplicationId: number | null = null;
   reportPage = 0;
   readonly listPageSize = 20;
 
-  authForm = this.fb.group<any>({
-    username: ['', [Validators.required]],
-    password: ['', [Validators.required]]
-  });
-
-  borrowerSearchForm = this.fb.group<any>({
-    businessPan: [''],
-    businessName: ['']
-  });
-
-  borrowerForm = this.fb.group<any>({
-    legalBusinessName: ['', [Validators.required, Validators.maxLength(150)]],
-    contactPersonName: ['', [Validators.required, Validators.maxLength(120)]],
-    businessPan: ['', [Validators.required, Validators.pattern(/^[A-Z]{5}[0-9]{4}[A-Z]$/)]],
-    gstin: [''],
-    email: ['', [Validators.required, Validators.email]],
-    phoneNumber: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
-    industryType: ['', [Validators.required, Validators.maxLength(80)]],
-    annualTurnover: [null, [Validators.required, Validators.min(1)]],
-    monthlyIncome: [null, [Validators.required, Validators.min(1)]],
-    addresses: this.fb.array([this.createAddressGroup('REGISTERED')])
-  });
-
-  documentForm = this.fb.group<any>({
-    documentType: ['PAN_CARD', [Validators.required]],
-    fileName: ['', [Validators.required, Validators.maxLength(180)]],
-    fileReference: ['', [Validators.required, Validators.maxLength(255)]],
-    remarks: ['']
-  });
-
-  documentReviewForm = this.fb.group<any>({
-    remarks: ['']
-  });
-
-  loanProductSearchForm = this.fb.group<any>({
-    name: [''],
-    active: [''],
-    amount: [''],
-    maxTenureMonths: ['']
-  });
-
-  loanProductForm = this.fb.group<any>({
-    productCode: ['', [Validators.required, Validators.maxLength(40)]],
-    name: ['', [Validators.required, Validators.maxLength(120)]],
-    minAmount: [null, [Validators.required, Validators.min(1)]],
-    maxAmount: [null, [Validators.required, Validators.min(1)]],
-    interestRate: [null, [Validators.required, Validators.min(0.1)]],
-    tenureMonths: [36, [Validators.required, Validators.min(1)]],
-    eligibilityCriteria: [''],
-    active: [true]
-  });
-
-  applicationSearchForm = this.fb.group<any>({
-    status: ['']
-  });
-
-  applicationForm = this.fb.group<any>({
-    borrowerId: [null, [Validators.required]],
-    loanProductId: [null, [Validators.required]],
-    requestedAmount: [null, [Validators.required, Validators.min(1)]],
-    requestedTenureMonths: [36, [Validators.required, Validators.min(1)]],
-    purpose: ['', [Validators.required, Validators.maxLength(200)]]
-  });
-
-  reviewerForm = this.fb.group<any>({
-    reviewerUserId: [null, [Validators.required]]
-  });
-
-  decisionForm = this.fb.group<any>({
-    decisionStatus: ['APPROVED', [Validators.required]],
-    remarks: ['', [Validators.required, Validators.maxLength(250)]]
-  });
-
-  disbursementForm = this.fb.group<any>({
-    disbursementReference: ['', [Validators.required]],
-    disbursementDate: [this.today(), [Validators.required]]
-  });
-
-  eligibilityForm = this.fb.group<any>({
-    borrowerId: [null, [Validators.required]],
-    loanProductId: [null, [Validators.required]],
-    requestedAmount: [null, [Validators.required, Validators.min(1)]],
-    requestedTenureMonths: [36, [Validators.required, Validators.min(1)]]
-  });
-
-  ruleForm = this.fb.group<any>({
-    ruleCode: ['INCOME_MIN', [Validators.required, Validators.maxLength(40)]],
-    ruleExpression: ['Monthly income should meet policy threshold', [Validators.required, Validators.maxLength(250)]],
-    ruleType: ['MIN_VALUE', [Validators.required]],
-    minValue: [100000],
-    maxValue: [null],
-    ruleValueText: [''],
-    active: [true]
-  });
-
-  repaymentForm = this.fb.group<any>({
-    amount: [null, [Validators.required, Validators.min(1)]],
-    paymentMode: ['UPI', [Validators.required]],
-    transactionReference: ['', [Validators.required]],
-    paymentDate: [this.today(), [Validators.required]],
-    notes: ['']
-  });
-
-  reportForm = this.fb.group<any>({
-    from: [''],
-    to: [''],
-    size: [8]
-  });
+  authForm = buildBusinessAuthForm(this.fb);
+  borrowerSearchForm = buildBusinessBorrowerSearchForm(this.fb);
+  borrowerForm = buildBusinessBorrowerForm(this.fb);
+  documentForm = buildBusinessDocumentForm(this.fb);
+  documentReviewForm = buildBusinessDocumentReviewForm(this.fb);
+  loanProductSearchForm = buildBusinessLoanProductSearchForm(this.fb);
+  loanProductForm = buildBusinessLoanProductForm(this.fb);
+  applicationSearchForm = buildBusinessApplicationSearchForm(this.fb);
+  applicationForm = buildBusinessApplicationForm(this.fb);
+  reviewerForm = buildBusinessReviewerForm(this.fb);
+  decisionForm = buildBusinessDecisionForm(this.fb);
+  disbursementForm = buildBusinessDisbursementForm(this.fb, this.today());
+  eligibilityForm = buildBusinessEligibilityForm(this.fb);
+  ruleForm = buildBusinessRuleForm(this.fb);
+  repaymentForm = buildBusinessRepaymentForm(this.fb, 'UPI', this.today());
+  reportForm = buildBusinessReportForm(this.fb);
 
   constructor(
     private readonly fb: FormBuilder,
@@ -239,9 +167,13 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
     this.route.data.subscribe((data) => {
       this.activeTab = (data['tab'] as AppTab | undefined) ?? 'dashboard';
     });
-    if (this.authSession.isAuthenticated) {
-      this.restoreSession();
-    }
+    this.route.queryParamMap.subscribe((params) => {
+      const selectedApplicationId = Number(params.get('selectedApplicationId'));
+      this.routeSelectedApplicationId = Number.isFinite(selectedApplicationId) && selectedApplicationId > 0
+        ? selectedApplicationId
+        : null;
+    });
+    this.restoreSession();
   }
 
   get addressArray(): FormArray {
@@ -266,7 +198,7 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
       approval: '/approval',
       servicing: '/servicing'
     };
-    void this.router.navigateByUrl(path[tab]);
+    void this.router.navigate([path[tab]], { queryParams: this.selectionQueryParams() });
   }
 
   login(): void {
@@ -295,9 +227,8 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
   }
 
   logout(): void {
-    const refreshToken = this.authSession.session?.refreshToken;
     this.actionBusy = 'logout';
-    const request = refreshToken ? this.api.logout(refreshToken) : of(void 0);
+    const request = this.authSession.isAuthenticated ? this.api.logout() : of(void 0);
     request.subscribe({
       next: () => this.clearSession('Signed out from the business lending workspace.'),
       error: () => this.clearSession('Session cleared locally after logout attempt.')
@@ -338,7 +269,8 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
         this.report = report;
 
         const borrowerId = resetSelections ? borrowers.items[0]?.id : this.selectedBorrower?.id ?? borrowers.items[0]?.id;
-        const applicationId = resetSelections ? applications.items[0]?.id : this.selectedApplication?.id ?? applications.items[0]?.id;
+        const applicationId = this.routeSelectedApplicationId
+          ?? (resetSelections ? applications.items[0]?.id : this.selectedApplication?.id ?? applications.items[0]?.id);
         const accountId = resetSelections ? accounts.items[0]?.id : this.selectedAccount?.id ?? accounts.items[0]?.id;
 
         this.selectedBorrower = borrowers.items.find((item) => item.id === borrowerId) ?? borrowers.items[0] ?? null;
@@ -355,6 +287,14 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
 
         if (this.selectedApplication) {
           this.patchApplicationForms(this.selectedApplication);
+        } else if (this.routeSelectedApplicationId) {
+          this.api.getApplication(this.routeSelectedApplicationId).subscribe({
+            next: (application) => this.selectApplication(application),
+            error: () => {
+              this.routeSelectedApplicationId = null;
+              this.syncSelectionQueryParams();
+            }
+          });
         }
 
         if (this.selectedAccount) {
@@ -413,7 +353,7 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
   }
 
   addAddress(): void {
-    this.addressArray.push(this.createAddressGroup('OPERATIONAL'));
+    this.addressArray.push(createBusinessAddressGroup(this.fb, 'OPERATIONAL'));
   }
 
   removeAddress(index: number): void {
@@ -435,7 +375,7 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
       (borrower) => {
         this.borrowerForm.reset();
         this.addressArray.clear();
-        this.addressArray.push(this.createAddressGroup('REGISTERED'));
+        this.addressArray.push(createBusinessAddressGroup(this.fb, 'REGISTERED'));
         this.borrowers = [borrower, ...this.borrowers.filter((item) => item.id !== borrower.id)];
         this.selectBorrower(borrower);
         this.notice = { kind: 'success', text: `Borrower ${borrower.legalBusinessName} created.` };
@@ -555,6 +495,8 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
   selectApplication(application: LoanApplicationResponse): void {
     this.selectedApplication = application;
     this.patchApplicationForms(application);
+    this.routeSelectedApplicationId = application.id;
+    this.syncSelectionQueryParams();
     this.notice = { kind: 'info', text: `Application ${application.id} selected for workflow actions.` };
   }
 
@@ -587,9 +529,15 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
       return;
     }
 
+    const reviewerUserId = Number(this.reviewerForm.get('reviewerUserId')?.value);
+    if (!Number.isFinite(reviewerUserId) || reviewerUserId <= 0) {
+      this.notice = { kind: 'warning', text: 'Choose a valid reviewer before assigning.' };
+      return;
+    }
+
     this.runAction(
       'assignReviewer',
-      () => this.api.assignReviewer(this.selectedApplication!.id, this.reviewerForm.getRawValue() as unknown as AssignReviewerRequest),
+      () => this.api.assignReviewer(this.selectedApplication!.id, { reviewerUserId } as AssignReviewerRequest),
       (application) => {
         this.replaceApplication(application);
         this.reloadDashboard();
@@ -822,7 +770,7 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
       },
       error: () => {
         this.bootstrapping = false;
-        this.clearSession('Stored session expired. Please sign in again.');
+        this.clearSession('Sign in to load the live business lending workspace.');
       }
     });
   }
@@ -971,24 +919,24 @@ export class BusinessLoanWorkspaceComponent implements OnInit {
     };
   }
 
-  private createAddressGroup(addressType: BorrowerAddressRequest['addressType'] = 'REGISTERED') {
-    return this.fb.group<any>({
-      addressType: [addressType, Validators.required],
-      lineOne: ['', [Validators.required, Validators.maxLength(160)]],
-      lineTwo: [''],
-      city: ['', [Validators.required, Validators.maxLength(80)]],
-      state: ['', [Validators.required, Validators.maxLength(80)]],
-      postalCode: ['', [Validators.required, Validators.maxLength(15)]],
-      country: ['', [Validators.required, Validators.maxLength(80)]]
-    });
-  }
-
   private touch(control: AbstractControl): void {
     control.markAllAsTouched();
   }
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private syncSelectionQueryParams(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.selectionQueryParams(),
+      replaceUrl: true
+    });
+  }
+
+  private selectionQueryParams(): Record<string, number> | {} {
+    return this.routeSelectedApplicationId ? { selectedApplicationId: this.routeSelectedApplicationId } : {};
   }
 
   private handleError(error: unknown, fallbackText: string): void {

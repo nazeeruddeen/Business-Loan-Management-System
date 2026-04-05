@@ -42,10 +42,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/refresh").permitAll()
+                        .requestMatchers("/auth/login", "/auth/refresh", "/auth/logout").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/auth/users/**").hasRole("ADMIN")
-                        .requestMatchers("/auth/me", "/auth/logout").authenticated()
+                        .requestMatchers("/auth/me").authenticated()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()

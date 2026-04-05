@@ -36,38 +36,38 @@ import { EligibilityRuleResponse, LoanProductResponse } from '../business-loan.m
           <div class="row">
             <label>
               Product code
-              <input type="text" formControlName="productCode">
+              <input type="text" formControlName="productCode" data-testid="business-product-code">
             </label>
             <label>
               Product name
-              <input type="text" formControlName="name">
+              <input type="text" formControlName="name" data-testid="business-product-name">
             </label>
           </div>
           <div class="row">
             <label>
               Min amount
-              <input type="number" formControlName="minAmount">
+              <input type="number" formControlName="minAmount" data-testid="business-product-min-amount">
             </label>
             <label>
               Max amount
-              <input type="number" formControlName="maxAmount">
+              <input type="number" formControlName="maxAmount" data-testid="business-product-max-amount">
             </label>
           </div>
           <div class="row">
             <label>
               Interest rate
-              <input type="number" formControlName="interestRate" step="0.1">
+              <input type="number" formControlName="interestRate" step="0.1" data-testid="business-product-interest-rate">
             </label>
             <label>
               Tenure months
-              <input type="number" formControlName="tenureMonths" min="1">
+              <input type="number" formControlName="tenureMonths" min="1" data-testid="business-product-tenure">
             </label>
           </div>
           <label>
             Eligibility criteria
-            <textarea rows="3" formControlName="eligibilityCriteria"></textarea>
+            <textarea rows="3" formControlName="eligibilityCriteria" data-testid="business-product-criteria"></textarea>
           </label>
-          <button type="button" class="primary" (click)="createLoanProduct.emit()" [disabled]="actionBusy === 'createProduct'">
+          <button type="button" class="primary" (click)="createLoanProduct.emit()" [disabled]="actionBusy === 'createProduct'" data-testid="business-create-product">
             {{ actionBusy === 'createProduct' ? 'Creating...' : 'Create product' }}
           </button>
         </form>
@@ -77,32 +77,32 @@ import { EligibilityRuleResponse, LoanProductResponse } from '../business-loan.m
           <div class="row">
             <label>
               Rule code
-              <input type="text" formControlName="ruleCode">
+              <input type="text" formControlName="ruleCode" data-testid="business-rule-code">
             </label>
             <label>
               Rule type
-              <input type="text" formControlName="ruleType">
+              <input type="text" formControlName="ruleType" data-testid="business-rule-type">
             </label>
           </div>
           <label>
             Rule expression
-            <input type="text" formControlName="ruleExpression">
+            <input type="text" formControlName="ruleExpression" data-testid="business-rule-expression">
           </label>
           <div class="row">
             <label>
               Min value
-              <input type="number" formControlName="minValue">
+              <input type="number" formControlName="minValue" data-testid="business-rule-min-value">
             </label>
             <label>
               Max value
-              <input type="number" formControlName="maxValue">
+              <input type="number" formControlName="maxValue" data-testid="business-rule-max-value">
             </label>
           </div>
           <label>
             Rule text
-            <input type="text" formControlName="ruleValueText">
+            <input type="text" formControlName="ruleValueText" data-testid="business-rule-text">
           </label>
-          <button type="button" class="primary" (click)="createRule.emit()" [disabled]="actionBusy === 'createRule'">
+          <button type="button" class="primary" (click)="createRule.emit()" [disabled]="actionBusy === 'createRule'" data-testid="business-create-rule">
             {{ actionBusy === 'createRule' ? 'Creating...' : 'Create rule' }}
           </button>
         </form>

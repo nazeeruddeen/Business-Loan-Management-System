@@ -29,11 +29,11 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
             </div>
           </form>
 
-          <form class="form" [formGroup]="borrowerForm">
+          <form class="form" [formGroup]="borrowerForm" data-testid="business-borrower-form">
             <div class="row">
               <label>
                 Legal business name
-                <input type="text" formControlName="legalBusinessName">
+                <input type="text" formControlName="legalBusinessName" data-testid="business-borrower-name">
               </label>
               <label>
                 Contact person
@@ -44,7 +44,7 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
             <div class="row">
               <label>
                 PAN
-                <input type="text" formControlName="businessPan" maxlength="10">
+                <input type="text" formControlName="businessPan" maxlength="10" data-testid="business-borrower-pan">
               </label>
               <label>
                 GSTIN
@@ -55,29 +55,29 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
             <div class="row">
               <label>
                 Email
-                <input type="email" formControlName="email">
+                <input type="email" formControlName="email" data-testid="business-borrower-email">
               </label>
               <label>
                 Phone number
-                <input type="text" formControlName="phoneNumber">
+                <input type="text" formControlName="phoneNumber" data-testid="business-borrower-phone">
               </label>
             </div>
 
             <div class="row">
               <label>
                 Industry type
-                <input type="text" formControlName="industryType">
+                <input type="text" formControlName="industryType" data-testid="business-borrower-industry">
               </label>
               <label>
                 Annual turnover
-                <input type="number" formControlName="annualTurnover" min="1" step="1">
+                <input type="number" formControlName="annualTurnover" min="1" step="1" data-testid="business-borrower-turnover">
               </label>
             </div>
 
             <div class="row">
               <label>
                 Monthly income
-                <input type="number" formControlName="monthlyIncome" min="1" step="1">
+                <input type="number" formControlName="monthlyIncome" min="1" step="1" data-testid="business-borrower-income">
               </label>
               <div class="spacer"></div>
             </div>
@@ -98,7 +98,7 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
                   </label>
                   <label>
                     Line one
-                    <input type="text" formControlName="lineOne">
+                    <input type="text" formControlName="lineOne" data-testid="business-address-line-one">
                   </label>
                 </div>
 
@@ -109,25 +109,25 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
                   </label>
                   <label>
                     City
-                    <input type="text" formControlName="city">
+                    <input type="text" formControlName="city" data-testid="business-address-city">
                   </label>
                 </div>
 
                 <div class="row">
                   <label>
                     State
-                    <input type="text" formControlName="state">
+                    <input type="text" formControlName="state" data-testid="business-address-state">
                   </label>
                   <label>
                     Postal code
-                    <input type="text" formControlName="postalCode">
+                    <input type="text" formControlName="postalCode" data-testid="business-address-postal-code">
                   </label>
                 </div>
 
                 <div class="row">
                   <label>
                     Country
-                    <input type="text" formControlName="country">
+                    <input type="text" formControlName="country" data-testid="business-address-country">
                   </label>
                   <div class="inline-actions align-end">
                     <button type="button" class="tiny danger" (click)="removeAddress.emit(i)" [disabled]="addressArray.length === 1">Remove</button>
@@ -136,7 +136,7 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
               </div>
             </div>
 
-            <button type="button" class="primary" (click)="createBorrower.emit()" [disabled]="actionBusy === 'createBorrower'">
+            <button type="button" class="primary" (click)="createBorrower.emit()" [disabled]="actionBusy === 'createBorrower'" data-testid="business-create-borrower">
               {{ actionBusy === 'createBorrower' ? 'Creating...' : 'Create borrower' }}
             </button>
           </form>
@@ -146,7 +146,8 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
               class="list-card list-card--selectable"
               *ngFor="let borrower of borrowers"
               (click)="selectBorrower.emit(borrower)"
-              [class.is-selected]="selectedBorrower?.id === borrower.id">
+              [class.is-selected]="selectedBorrower?.id === borrower.id"
+              [attr.data-testid]="'business-borrower-card-' + borrower.id">
               <strong>{{ borrower.legalBusinessName }}</strong>
               <span>{{ borrower.businessPan }} · {{ borrower.industryType }}</span>
               <small>{{ borrower.contactPersonName }} · {{ borrower.phoneNumber }}</small>
@@ -189,25 +190,25 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
             </p>
           </div>
 
-          <form class="form" [formGroup]="documentForm">
+          <form class="form" [formGroup]="documentForm" data-testid="business-document-form">
             <div class="section-subtitle">Document intake</div>
             <div class="row">
               <label>
                 Document type
-                <select formControlName="documentType">
+                <select formControlName="documentType" data-testid="business-document-type">
                   <option *ngFor="let type of documentTypes" [value]="type">{{ formatLabel(type) }}</option>
                 </select>
               </label>
               <label>
                 File name
-                <input type="text" formControlName="fileName" placeholder="pan-card.pdf">
+                <input type="text" formControlName="fileName" placeholder="pan-card.pdf" data-testid="business-document-file-name">
               </label>
             </div>
 
             <div class="row">
               <label>
                 File reference
-                <input type="text" formControlName="fileReference" placeholder="s3://kyc/bizloan/pan-card.pdf">
+                <input type="text" formControlName="fileReference" placeholder="s3://kyc/bizloan/pan-card.pdf" data-testid="business-document-file-reference">
               </label>
               <label>
                 Remarks
@@ -215,7 +216,7 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
               </label>
             </div>
 
-            <button type="button" class="primary" (click)="createBorrowerDocument.emit()" [disabled]="actionBusy === 'createDocument'">
+            <button type="button" class="primary" (click)="createBorrowerDocument.emit()" [disabled]="actionBusy === 'createDocument'" data-testid="business-add-document">
               {{ actionBusy === 'createDocument' ? 'Saving...' : 'Add document metadata' }}
             </button>
           </form>
@@ -229,7 +230,7 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
           </form>
 
           <div class="list">
-            <article class="list-card" *ngFor="let document of borrowerDocuments">
+            <article class="list-card" *ngFor="let document of borrowerDocuments" [attr.data-testid]="'business-document-card-' + document.documentType">
               <strong>{{ formatLabel(document.documentType) }}</strong>
               <span>{{ document.fileName }} · {{ document.documentStatus }}</span>
               <small>{{ document.fileReference }}</small>
@@ -238,7 +239,7 @@ import { BorrowerDocumentResponse, BorrowerDocumentStatus, BorrowerResponse } fr
                 <span class="chip muted" *ngIf="document.reviewedBy">Reviewed by {{ document.reviewedBy }}</span>
               </div>
               <div class="inline-actions">
-                <button type="button" class="ghost tiny" (click)="reviewDocumentAction.emit({ document, status: 'VERIFIED' })" [disabled]="!documentCanVerify(document) || actionBusy === 'reviewDocument-' + document.id">
+                <button type="button" class="ghost tiny" (click)="reviewDocumentAction.emit({ document, status: 'VERIFIED' })" [disabled]="!documentCanVerify(document) || actionBusy === 'reviewDocument-' + document.id" [attr.data-testid]="'business-verify-document-' + document.documentType">
                   Verify
                 </button>
                 <button type="button" class="danger tiny" (click)="reviewDocumentAction.emit({ document, status: 'REJECTED' })" [disabled]="!documentCanReject(document) || actionBusy === 'reviewDocument-' + document.id">
@@ -292,3 +293,26 @@ export class BusinessBorrowersComponent {
     return document.documentStatus === 'UPLOADED' || document.documentStatus === 'PENDING' || document.documentStatus === 'VERIFIED';
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

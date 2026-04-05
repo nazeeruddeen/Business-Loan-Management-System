@@ -20,24 +20,24 @@ import { EligibilityEvaluationResponse, LoanApplicationResponse } from '../busin
             <div class="row">
               <label>
                 Borrower ID
-                <input type="number" formControlName="borrowerId" min="1">
+                <input type="number" formControlName="borrowerId" min="1" data-testid="business-eligibility-borrower-id">
               </label>
               <label>
                 Product ID
-                <input type="number" formControlName="loanProductId" min="1">
+                <input type="number" formControlName="loanProductId" min="1" data-testid="business-eligibility-product-id">
               </label>
             </div>
             <div class="row">
               <label>
                 Requested amount
-                <input type="number" formControlName="requestedAmount" min="1">
+                <input type="number" formControlName="requestedAmount" min="1" data-testid="business-eligibility-requested-amount">
               </label>
               <label>
                 Tenure months
-                <input type="number" formControlName="requestedTenureMonths" min="1">
+                <input type="number" formControlName="requestedTenureMonths" min="1" data-testid="business-eligibility-tenure">
               </label>
             </div>
-            <button type="button" class="primary" (click)="evaluateEligibility.emit()" [disabled]="actionBusy === 'evaluateEligibility'">
+            <button type="button" class="primary" (click)="evaluateEligibility.emit()" [disabled]="actionBusy === 'evaluateEligibility'" data-testid="business-evaluate-eligibility">
               {{ actionBusy === 'evaluateEligibility' ? 'Evaluating...' : 'Evaluate eligibility' }}
             </button>
           </form>
@@ -61,28 +61,28 @@ import { EligibilityEvaluationResponse, LoanApplicationResponse } from '../busin
           <div class="row">
             <label>
               Borrower ID
-              <input type="number" formControlName="borrowerId" min="1">
+              <input type="number" formControlName="borrowerId" min="1" data-testid="business-application-borrower-id">
             </label>
             <label>
               Product ID
-              <input type="number" formControlName="loanProductId" min="1">
+              <input type="number" formControlName="loanProductId" min="1" data-testid="business-application-product-id">
             </label>
           </div>
           <div class="row">
             <label>
               Requested amount
-              <input type="number" formControlName="requestedAmount" min="1">
+              <input type="number" formControlName="requestedAmount" min="1" data-testid="business-application-requested-amount">
             </label>
             <label>
               Tenure months
-              <input type="number" formControlName="requestedTenureMonths" min="1">
+              <input type="number" formControlName="requestedTenureMonths" min="1" data-testid="business-application-tenure">
             </label>
           </div>
           <label>
             Purpose
-            <textarea rows="3" formControlName="purpose"></textarea>
+            <textarea rows="3" formControlName="purpose" data-testid="business-application-purpose"></textarea>
           </label>
-          <button type="button" class="primary" (click)="createApplication.emit()" [disabled]="actionBusy === 'createApplication'">
+          <button type="button" class="primary" (click)="createApplication.emit()" [disabled]="actionBusy === 'createApplication'" data-testid="business-create-application">
             {{ actionBusy === 'createApplication' ? 'Creating...' : 'Create application' }}
           </button>
         </form>
@@ -93,7 +93,8 @@ import { EligibilityEvaluationResponse, LoanApplicationResponse } from '../busin
           class="list-card list-card--selectable"
           *ngFor="let application of applications"
           (click)="selectApplication.emit(application)"
-          [class.is-selected]="selectedApplication?.id === application.id">
+          [class.is-selected]="selectedApplication?.id === application.id"
+          [attr.data-testid]="'business-application-card-' + application.id">
           <strong>{{ application.borrowerName }} · {{ application.loanProductCode }}</strong>
           <span>₹{{ formatMoney(application.requestedAmount) }} · {{ application.requestedTenureMonths }} months</span>
           <small>Status {{ application.status }} · {{ application.eligibilitySummary }}</small>

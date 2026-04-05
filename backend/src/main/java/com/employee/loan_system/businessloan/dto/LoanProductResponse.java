@@ -2,6 +2,7 @@ package com.employee.loan_system.businessloan.dto;
 
 import lombok.Builder;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -17,5 +18,5 @@ public record LoanProductResponse(
         String eligibilityCriteria,
         boolean active,
         LocalDateTime createdAt
-) {
+) implements Serializable {
 }
