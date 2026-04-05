@@ -2,7 +2,7 @@
   "title": "Business Loan Backend Overview",
   "uid": "business-loan-overview",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "15s",
   "panels": [
     {
@@ -24,58 +24,67 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "HTTP Requests / sec",
+      "title": "Review Backlog",
       "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
       "targets": [
-        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"business-loan-backend\"}[5m]))", "refId": "A" }
+        { "expr": "business_loan_review_backlog_count", "refId": "A" }
       ]
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Heap Used",
+      "title": "Overdue Installments",
       "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
       "targets": [
-        { "expr": "sum(jvm_memory_used_bytes{job=\"business-loan-backend\",area=\"heap\"})", "refId": "A" }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
-      }
+        { "expr": "business_loan_installments_overdue_count", "refId": "A" }
+      ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Live Threads",
+      "title": "Outstanding Principal",
       "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
       "targets": [
-        { "expr": "jvm_threads_live_threads{job=\"business-loan-backend\"}", "refId": "A" }
-      ]
+        { "expr": "business_loan_portfolio_amount{kind=\"outstanding_principal\"}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyINR" } }
     },
     {
       "id": 5,
       "type": "timeseries",
-      "title": "Request Rate",
+      "title": "Application Queue by Status",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
       "targets": [
-        { "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"business-loan-backend\",uri!=\"UNKNOWN\"}[5m]))", "legendFormat": "{{uri}}", "refId": "A" }
+        { "expr": "business_loan_applications_status_count", "legendFormat": "{{status}}", "refId": "A" }
       ]
     },
     {
       "id": 6,
       "type": "timeseries",
-      "title": "JVM Heap",
+      "title": "Account Lifecycle by Status",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "targets": [
-        { "expr": "sum(jvm_memory_used_bytes{job=\"business-loan-backend\",area=\"heap\"})", "legendFormat": "heap used", "refId": "A" },
-        { "expr": "sum(jvm_memory_max_bytes{job=\"business-loan-backend\",area=\"heap\"})", "legendFormat": "heap max", "refId": "B" }
+        { "expr": "business_loan_accounts_status_count", "legendFormat": "{{status}}", "refId": "A" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "Portfolio Mix",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "targets": [
+        { "expr": "business_loan_portfolio_amount", "legendFormat": "{{kind}}", "refId": "A" }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
-      }
+      "fieldConfig": { "defaults": { "unit": "currencyINR" } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "HTTP Requests / sec",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{job=\"business-loan-backend\"}[5m]))", "refId": "A" }
+      ]
     }
   ]
 }

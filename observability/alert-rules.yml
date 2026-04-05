@@ -1,0 +1,32 @@
+groups:
+  - name: business-loan-domain
+    rules:
+      - alert: BusinessLoanReviewBacklogHigh
+        expr: business_loan_review_backlog_count > 5
+        for: 15m
+        labels:
+          severity: warning
+          service: business-loan
+        annotations:
+          summary: Business loan review backlog is building
+          description: Submitted and under-review applications have remained above 5 for 15 minutes.
+
+      - alert: BusinessLoanOverdueInstallmentsHigh
+        expr: business_loan_installments_overdue_count > 3
+        for: 15m
+        labels:
+          severity: warning
+          service: business-loan
+        annotations:
+          summary: Overdue business-loan installments detected
+          description: More than 3 installments are overdue and need servicing follow-up.
+
+      - alert: BusinessLoanOutstandingPortfolioHigh
+        expr: business_loan_portfolio_amount{kind="outstanding_principal"} > 5000000
+        for: 30m
+        labels:
+          severity: info
+          service: business-loan
+        annotations:
+          summary: Outstanding business-loan principal is elevated
+          description: Active portfolio outstanding principal has exceeded 5,000,000 for 30 minutes.
