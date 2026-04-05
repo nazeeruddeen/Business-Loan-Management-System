@@ -7,6 +7,41 @@ import { DisbursementReportResponse, LoanAccountResponse, PaymentMode } from '..
   selector: 'app-business-servicing',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  styles: [`
+    .report-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 200px) 1fr;
+      gap: 18px;
+      align-items: end;
+    }
+
+    .report-toolbar__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-start;
+      align-items: center;
+      padding-bottom: 2px;
+    }
+
+    .report-toolbar__actions button {
+      min-width: 108px;
+    }
+
+    @media (max-width: 900px) {
+      .report-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .report-toolbar__actions {
+        justify-content: stretch;
+      }
+
+      .report-toolbar__actions button {
+        flex: 1 1 160px;
+      }
+    }
+  `],
   template: `
     <article class="panel animated-panel">
       <header class="panel__header">
@@ -61,12 +96,12 @@ import { DisbursementReportResponse, LoanAccountResponse, PaymentMode } from '..
                 <input type="date" formControlName="to">
               </label>
             </div>
-            <div class="row">
+            <div class="report-toolbar">
               <label>
                 Page size
                 <input type="number" formControlName="size" min="1">
               </label>
-              <div class="inline-actions align-end">
+              <div class="report-toolbar__actions">
                 <button type="button" class="ghost" (click)="loadReport.emit()">Load</button>
                 <button type="button" class="ghost" (click)="previousPage.emit()">Prev</button>
                 <button type="button" class="ghost" (click)="nextPage.emit()">Next</button>
