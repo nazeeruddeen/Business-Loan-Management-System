@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: business-loan
+resources:
+  - observability-stack.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: business-loan-prometheus-config
+    files:
+      - prometheus.yml
+      - alert-rules.yml
+  - name: business-loan-alertmanager-config
+    files:
+      - alertmanager.yml
+  - name: business-loan-grafana-datasources
+    files:
+      - datasource.yml
+  - name: business-loan-grafana-dashboards-provider
+    files:
+      - dashboards.yml
+  - name: business-loan-grafana-dashboard
+    files:
+      - dashboard.json
