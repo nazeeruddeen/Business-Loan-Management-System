@@ -42,6 +42,59 @@ pipeline {
             }
         }
 
+        stage('Frontend E2E') {
+            steps {
+                withEnv([
+                        'CI=true',
+                        'BUSINESS_LOAN_MYSQL_ROOT_PASSWORD=businessRoot#2026',
+                        'BUSINESS_LOAN_DB_PASSWORD=businessDb#2026',
+                        'BUSINESS_LOAN_JWT_SECRET=business-jwt-secret-for-ci-automation-2026',
+                        'BUSINESS_LOAN_ADMIN_PASSWORD=Admin#Biz2026',
+                        'BUSINESS_LOAN_OFFICER_PASSWORD=Officer#Biz2026',
+                        'BUSINESS_LOAN_REVIEWER_PASSWORD=Reviewer#Biz2026',
+                        'BUSINESS_LOAN_BORROWER_PASSWORD=Borrower#Biz2026',
+                        'BUSINESS_LOAN_FRONTEND_HOST_PORT=4300',
+                        'BUSINESS_LOAN_MYSQL_HOST_PORT=33061'
+                ]) {
+                    sh '''
+                        set -euo pipefail
+                        rm -rf frontend/playwright-report frontend/test-results
+                        docker compose down -v --remove-orphans || true
+                        docker compose up -d --build
+                        ready=0
+                        for attempt in $(seq 1 30); do
+                          if curl -fsS http://127.0.0.1:8010/actuator/health/readiness >/dev/null && curl -fsS http://127.0.0.1:4300/ >/dev/null; then
+                            ready=1
+                            break
+                          fi
+                          sleep 5
+                        done
+                        if [ "$ready" -ne 1 ]; then
+                          docker compose logs
+                          exit 1
+                        fi
+                        docker run --rm --add-host=host.docker.internal:host-gateway \
+                          -e CI=true \
+                          -e PLAYWRIGHT_JUNIT_OUTPUT_NAME=test-results/e2e-results.xml \
+                          -e BUSINESS_E2E_BASE_URL=http://host.docker.internal:4300 \
+                          -e BUSINESS_E2E_API_BASE_URL=http://host.docker.internal:8010 \
+                          -e BUSINESS_E2E_PASSWORD="$BUSINESS_LOAN_ADMIN_PASSWORD" \
+                          -v "$PWD/frontend:/work" \
+                          -w /work \
+                          mcr.microsoft.com/playwright:v1.59.1-noble \
+                          sh -lc "npm ci && npx playwright test tests/golden-path.spec.ts --reporter=line,junit,html"
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: 'frontend/test-results/e2e-results.xml'
+                    archiveArtifacts allowEmptyArchive: true, artifacts: 'frontend/playwright-report/**,frontend/test-results/**'
+                    sh 'docker compose down -v --remove-orphans || true'
+                }
+            }
+        }
+
         stage('Docker Build') {
             steps {
                 sh "docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} -f backend/Dockerfile backend"
